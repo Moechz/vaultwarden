@@ -1,0 +1,45 @@
+[Unit]
+Description=Vaultwarden Password Manager (Bitwarden-compatible server)
+Documentation=https://github.com/dani-garcia/vaultwarden/wiki
+After=network.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+User=vaultwarden
+Group=vaultwarden
+WorkingDirectory=/usr/local/vaultwarden
+# Vaultwarden 没有命令行参数，全部配置经环境变量/数据目录 config.json 读取。
+# 默认参数写死在 unit（等价于 navidrome 的 ExecStart flags 写死策略）：
+#   直开端口模式（D-001）：必须监听 0.0.0.0 才能被桌面图标与各端客户端访问；
+#   DATA_FOLDER / WEB_VAULT_FOLDER 指向本包规范路径。
+# 下方 EnvironmentFile 在其后声明 → env 文件可覆盖以上一切默认值
+# （改端口/数据目录写 vaultwarden.env 即可，无需动 unit）。
+Environment=ROCKET_ADDRESS=0.0.0.0
+Environment=ROCKET_PORT=8222
+Environment=DATA_FOLDER=/var/lib/vaultwarden
+Environment=WEB_VAULT_FOLDER=/usr/local/vaultwarden/web-vault
+EnvironmentFile=-/usr/local/vaultwarden/vaultwarden.env
+# ExecStart 无任何参数与变量展开（systemd 只支持基本 ${VAR}，
+# 不支持 shell 风格默认值，曾致全环境 502）。
+ExecStart=/usr/local/vaultwarden/bin/vaultwarden
+TimeoutStartSec=30
+TimeoutStopSec=10
+# 注意：按 TOS 规范不配置 Restart/RestartSec——生命周期由应用中心统一管理
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/vaultwarden
+LimitNOFILE=65536
+UMask=0027
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+
+[Install]
+WantedBy=multi-user.target

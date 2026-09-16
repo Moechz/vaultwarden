@@ -1,0 +1,17 @@
+# 构建产物与缓存
+out/
+build/
+*.deb
+*.sha256
+
+# 内部交接文档（公开仓库只放代码与面向用户文档；见 TOS 指南坑 20）
+AGENTS.md
+HANDOFF.md
+PROJECT_NOTES.md
+docs/TASK_STATE.md
+
+# macOS
+.DS_Store
+._*
+__pycache__/
+*.pyc
