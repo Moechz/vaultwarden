@@ -68,5 +68,10 @@ the authoritative value is the sha256 recorded in the Release and pinned in
 
 ## Package provenance inside the deb
 
-`/usr/share/doc/vaultwarden/PROVENANCE.md` in every deb records the upstream
+`/usr/local/vaultwarden/PROVENANCE.md` in every deb records the upstream
 tag, web vault tag, CI repository, toolchain and both sha256 pins.
+
+> It ships under `/usr/local/vaultwarden/`, **not** `/usr/share/doc/vaultwarden/`:
+> TOS preconfigures `dpkg.cfg.d/excludes` to strip `/usr/share/doc/*` (keeping only
+> `copyright` and `changelog.*`), so anything placed there is silently dropped at
+> install time even though `dpkg -c` lists it.

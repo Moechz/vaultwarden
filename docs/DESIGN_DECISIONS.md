@@ -94,7 +94,7 @@
 **Consequences:**
 - 驱动：V6（坑 30a/31/32/43）——包内预编译 ELF 无源码可溯 = 一票拒；Docker 镜像提取的二进制审计链更弱。
 - compat 模式（原镜像提取）保留为本地调试逃生门（`VW_COMPAT=1 ./build.sh`），构建时显式警告"产物禁止上架"并跳过 sha256 钉死校验。
-- 溯源三件套：VERIFICATION.md + repro-build.sh + Dockerfile.repro（公开仓库）；PROVENANCE.md 随包落盘 /usr/share/doc/vaultwarden/。
+- 溯源三件套：VERIFICATION.md + repro-build.sh + Dockerfile.repro（公开仓库）；PROVENANCE.md 随包落盘 **/usr/local/vaultwarden/**（原定 /usr/share/doc/vaultwarden/，真机发现 TOS dpkg 剥离该目录后迁址，见打包指南坑 50）。
 - 鸡生蛋流程：先推 workflow → 打 tag v<VERSION_FULL> 触 CI → Release 出产物 → sha256 回填 config.env → source 模式重出 deb。升级上游版本需重跑此循环。
 - 排除方案：本地 cargo 交叉编译（构建机无审计链，与 V6 初裁同样被动）；改用上游官方 Release 二进制（1.37.x 起不存在）。
 
