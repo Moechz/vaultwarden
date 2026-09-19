@@ -614,9 +614,9 @@ stage_deb() {
   "$SCRIPT_DIR/makedeb.sh" "$STAGE_DIR" "$ASSETS_DIR" "$DEB_FILE" \
     "$VERSION_FULL" "$TARGET_ARCH" "$MAINTAINER_FULL"
 
-  # Release 资产命名（版本由 Release tag 表达）+ 上架要求的 sha256
+  # Release 资产命名（版本由 Release tag 表达）+ 上架要求的 sha256（含文件名）
   cp "$DEB_FILE" "$STORE_DEB"
-  sha256_of "$STORE_DEB" | awk '{print $1"  "$2}' > "$STORE_DEB.sha256"
+  sha256_of "$STORE_DEB" | awk -v f="$(basename "$STORE_DEB")" '{print $1"  "f}' > "$STORE_DEB.sha256"
   log "完成: $DEB_FILE"
   log "上架资产: $STORE_DEB (+ .sha256；Release tag 须为 v$VERSION_FULL)"
 }
