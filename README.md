@@ -4,14 +4,21 @@
 TOS 7 App Center — a self-hosted, Bitwarden-compatible password manager
 server in a single deb.
 
-- **Web vault + admin panel** ship in the box (admin panel at `/admin`).
+- **Web vault + admin panel** ship in the box, served through the TOS gateway
+  route `/vaultwarden/` (admin panel at `/vaultwarden/admin`).
 - **All Bitwarden clients** (browser extension, desktop, mobile) connect to
-  `http://<NAS-IP>:8222` as a self-hosted server.
-- **Static musl binary** taken from the official `vaultwarden/server:<ver>-alpine`
-  image (content-verified by registry digest) — zero runtime dependencies.
+  `http(s)://<your-NAS>/vaultwarden` as a self-hosted server.
+- **CI-built static binary**: this repository's public GitHub Actions build
+  the server from the upstream source tag (musl, zero runtime dependencies);
+  the web vault is the official [bw_web_builds](https://github.com/dani-garcia/bw_web_builds)
+  release. See [VERIFICATION.md](VERIFICATION.md) for the full provenance chain.
+- The service **listens on loopback only**; the TOS nginx gateway is the single
+  entry point (reverse proxy with WebSocket support).
 - Runs as a dedicated unprivileged user in a hardened systemd sandbox.
 - Vault data lives in `/var/lib/vaultwarden` (kept on `apt remove`, deleted on
   `apt purge`).
+- Privacy policy: `/vaultwarden/privacy-policy.html` (no telemetry; your vault
+  never leaves the NAS).
 
 ## Install
 
@@ -20,19 +27,19 @@ or `apt install ./vaultwarden_*.deb`. Builds: `x86_64` and `aarch64`.
 
 ## First run
 
-1. Open the app from the TOS desktop — it opens `http://<NAS-IP>:8222` in a
-   new browser tab.
+1. Open the app from the TOS desktop — it opens the web vault at
+   `/vaultwarden/` (through the TOS web entry point).
 2. **Create your account immediately** — the first person to register owns the
    vault. Then turn off open sign-ups (`SIGNUPS_ALLOWED=false` in
    `/usr/local/vaultwarden/vaultwarden.env`, then
    `systemctl restart vaultwarden`) or invite users from the admin panel.
-3. Admin panel: `http://<NAS-IP>:8222/admin`. The token is generated at
+3. Admin panel: `http(s)://<NAS>/vaultwarden/admin`. The token is generated at
    install time:
    ```sh
    grep ADMIN_TOKEN /usr/local/vaultwarden/vaultwarden.env
    ```
 4. Point your Bitwarden clients (extension / desktop / mobile) at
-   `http://<NAS-IP>:8222`.
+   `http(s)://<NAS>/vaultwarden`.
 
 ## HTTPS note (important)
 
@@ -42,33 +49,29 @@ web vault, not specific to this package). On a plain-HTTP LAN:
 
 - use the Bitwarden **apps / browser extension** (they talk to the API directly
   and work over HTTP), or
-- enable HTTPS on the NAS, or put an HTTPS reverse proxy in front (the proxy
-  must serve Vaultwarden at the URL root, no sub-path).
+- enable HTTPS on the NAS (the TOS gateway route `/vaultwarden/` then serves
+  the web vault over HTTPS automatically).
 
 Also set `DOMAIN=` in `vaultwarden.env` to your real access URL — it affects
-email links, WebAuthn/passkeys and a few client features.
+email links, WebAuthn/passkeys and a few client features. **Keep the
+`/vaultwarden` path part**; only change the scheme/host/port (the path is
+pinned to the gateway route).
 
-## Why a direct port instead of the TOS web-server route?
+## Upstream & credits
 
-Vaultwarden's API endpoints are hard-mounted at the URL root (`/api`,
-`/identity`, `/notifications`, ...) and the web vault issues root-relative
-requests, so it cannot be served behind a `/vaultwarden/` prefix; the TOS web
-port's root namespace belongs to TOS itself. The app therefore listens on
-`0.0.0.0:8222` and a `/vaultwarden/` location on the TOS web port just
-redirects there. (Same approach as other direct-port TOS apps.)
+- Server: [Vaultwarden](https://github.com/dani-garcia/vaultwarden) by
+  Daniel García (AGPL-3.0) — built from source by this repo's CI.
+- Web vault: [bw_web_builds](https://github.com/dani-garcia/bw_web_builds)
+  (official patched builds of the Bitwarden web vault, AGPL-3.0).
+- TOS packaging maintained by Moechz.
 
-## Build from source
+## Building the deb yourself
 
 ```sh
-make check      # syntax + asset self-checks
-./build.sh all  # fetch (Docker registry API, no docker needed) → stage → verify → deb
+make check        # static asset checks
+./build.sh        # fetch (from GitHub Releases) + stage + verify + deb
 ```
 
-`config.env` pins the upstream version, package release and target arch.
-Output lands in `out/` (`vaultwarden_<version>_<arch>.deb` for local installs,
-`vaultwarden_{x86_64,aarch64}.deb` + `.sha256` as store release assets).
-
-## License
-
-Vaultwarden is AGPL-3.0. The bundled web vault is (c) Bitwarden Inc.
-(AGPL-3.0). See `/usr/share/doc/vaultwarden/copyright` inside the package.
+Version pins and sha256 checks live in `config.env`. To bump the upstream
+version, update `config.env`, push, tag `v<version>` (CI builds and publishes
+the binaries), then fill the new sha256 pins and rebuild.
