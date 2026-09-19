@@ -1,5 +1,5 @@
 [en-us]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden is a self-hosted, Bitwarden-compatible password manager server written in Rust. It ships the official web vault (login page) and an admin panel at /vaultwarden/admin where you manage users, organizations, invitations, WebSocket notifications and attachments. All Bitwarden browser extensions, desktop and mobile apps connect through the /vaultwarden/ route. Runs as a dedicated unprivileged user in a hardened systemd sandbox; data is stored in /var/lib/vaultwarden. Privacy policy: /vaultwarden/privacy-policy.html."
@@ -7,7 +7,7 @@ release_note = "Bundles the Vaultwarden @@UPSTREAM@@ server built from the offic
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [zh-cn]
-name         = "Vaultwarden 密码管理服务器"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden 是用 Rust 编写的自托管密码管理服务器，与 Bitwarden 协议完全兼容。自带官方网页保管库（登录页），并提供 /vaultwarden/admin 管理后台，可管理用户、组织、邀请、WebSocket 实时通知与附件。各类 Bitwarden 客户端——浏览器插件、桌面端、移动 App——均通过 /vaultwarden/ 路由接入。服务以专用非特权用户运行并施加 systemd 沙箱加固，数据保存在 /var/lib/vaultwarden。隐私政策：/vaultwarden/privacy-policy.html。"
@@ -15,7 +15,7 @@ release_note = "内置由官方源码发布构建的 Vaultwarden @@UPSTREAM@@ �
 important    = "网页保管库解锁/登录需要 HTTPS（浏览器 WebCrypto 安全上下文限制，所有 Bitwarden 网页版固有的行为）：局域网 http 环境请使用各端 App/浏览器插件，或在 NAS 启用 HTTPS/自行加反代。安装后请立即打开网页完成账号注册（首位注册者即密码库所有者），随后关闭开放注册（SIGNUPS_ALLOWED）或改用后台邀请。apt remove 卸载时保留 /var/lib/vaultwarden 数据，apt purge 会彻底删除整个密码库数据库。"
 
 [zh-hk]
-name         = "Vaultwarden 密碼管理伺服器"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden 是以 Rust 編寫的自架密碼管理伺服器，與 Bitwarden 協定完全相容。內建官方網頁保管庫（登入頁），並提供 /vaultwarden/admin 管理後台，可管理使用者、組織、邀請、WebSocket 即時通知與附件。各類 Bitwarden 用戶端——瀏覽器擴充功能、桌面版、行動 App——均透過 /vaultwarden/ 路由接入。服務以專用非特權使用者執行並施加 systemd 沙箱強化，資料保存在 /var/lib/vaultwarden。隱私政策：/vaultwarden/privacy-policy.html。"
@@ -23,7 +23,7 @@ release_note = "內建由官方原始碼發行版建置的 Vaultwarden @@UPSTREA
 important    = "網頁保管庫解鎖/登入需要 HTTPS（瀏覽器 WebCrypto 安全上下文限制，所有 Bitwarden 網頁版固有的行為）：區域網路 http 環境請使用各端 App/瀏覽器擴充功能，或在 NAS 啟用 HTTPS/自行加反向代理。安裝後請立即開啟網頁完成帳號註冊（首位註冊者即密碼庫擁有者），隨後關閉開放註冊（SIGNUPS_ALLOWED）或改用後台邀請。apt remove 移除時保留 /var/lib/vaultwarden 資料，apt purge 會徹底刪除整個密碼庫資料庫。"
 
 [fr-fr]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden est un serveur de gestion de mots de passe auto-hébergé, compatible Bitwarden, écrit en Rust. Il embarque le coffre-fort web officiel (page de connexion) et un panneau d'administration sur /vaultwarden/admin pour gérer utilisateurs, organisations, invitations, notifications WebSocket et pièces jointes. Toutes les extensions de navigateur et applications Bitwarden (bureau et mobile) se connectent via la route /vaultwarden/. S'exécute sous un utilisateur dédié non privilégié dans un bac à sable systemd renforcé ; données stockées dans /var/lib/vaultwarden. Politique de confidentialité : /vaultwarden/privacy-policy.html."
@@ -31,7 +31,7 @@ release_note = "Embarque le serveur officiel Vaultwarden @@UPSTREAM@@ construit 
 important    = "Le coffre-fort web dans le navigateur nécessite HTTPS pour se déverrouiller (restriction de contexte sécurisé WebCrypto, propre à tous les coffres Bitwarden). Sur un réseau local en HTTP simple, utilisez les applications/extensions Bitwarden, ou activez HTTPS sur le NAS / placez un reverse proxy. Après l'installation, ouvrez la page et créez immédiatement votre compte : la première personne inscrite possède le coffre ; désactivez ensuite l'inscription libre (SIGNUPS_ALLOWED). 'apt remove' conserve /var/lib/vaultwarden, 'apt purge' supprime toute la base."
 
 [de-de]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden ist ein selbst gehosteter, Bitwarden-kompatibler Passwort-Manager-Server in Rust. Er bringt den offiziellen Web-Tresor (Login-Seite) und ein Admin-Panel unter /vaultwarden/admin mit, um Benutzer, Organisationen, Einladungen, WebSocket-Benachrichtigungen und Anhänge zu verwalten. Alle Bitwarden-Browser-Erweiterungen sowie Desktop- und Mobil-Apps verbinden sich über die Route /vaultwarden/. Läuft als dedizierter unprivilegierter Benutzer in einer gehärteten systemd-Sandbox; Daten liegen in /var/lib/vaultwarden. Datenschutzerklärung: /vaultwarden/privacy-policy.html."
@@ -39,7 +39,7 @@ release_note = "Enthält den offiziellen Vaultwarden-Server @@UPSTREAM@@, gebaut
 important    = "Der Web-Tresor im Browser braucht zum Entsperren HTTPS (WebCrypto-Secure-Context-Einschränkung, allen Bitwarden-Web-Tresoren inhärent). Im reinen HTTP-LAN verwenden Sie die Bitwarden-Apps/-Erweiterungen oder aktivieren HTTPS auf dem NAS / schalten einen Reverse Proxy vor. Öffnen Sie nach der Installation sofort die Seite und legen Sie Ihr Konto an: Wer sich zuerst registriert, besitzt den Tresor; deaktivieren Sie danach freie Registrierungen (SIGNUPS_ALLOWED). 'apt remove' behält /var/lib/vaultwarden, 'apt purge' löscht die gesamte Datenbank."
 
 [it-it]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden è un server di gestione password self-hosted, compatibile con Bitwarden, scritto in Rust. Include la web vault ufficiale (pagina di accesso) e un pannello di amministrazione su /vaultwarden/admin per gestire utenti, organizzazioni, inviti, notifiche WebSocket e allegati. Tutte le estensioni browser e le app Bitwarden (desktop e mobile) si collegano tramite la rotta /vaultwarden/. Esegue come utente dedicato non privilegiato in un sandbox systemd rafforzato; i dati sono archiviati in /var/lib/vaultwarden. Informativa sulla privacy: /vaultwarden/privacy-policy.html."
@@ -47,7 +47,7 @@ release_note = "Include il server Vaultwarden @@UPSTREAM@@ compilato dalla relea
 important    = "La cassaforte web nel browser richiede HTTPS per sbloccare (restrizione di contesto sicuro WebCrypto, insita in tutte le cassaforti web Bitwarden). In LAN HTTP semplice usare le app/estensioni Bitwarden, oppure attivare HTTPS sul NAS / inserire un reverse proxy. Dopo l'installazione aprire subito la pagina e creare il proprio account: il primo registrato possiede la cassaforte; disattivare poi le registrazioni libere (SIGNUPS_ALLOWED). 'apt remove' conserva /var/lib/vaultwarden, 'apt purge' elimina l'intero database."
 
 [es-es]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden es un servidor de gestión de contraseñas autoalojado, compatible con Bitwarden, escrito en Rust. Incluye la bóveda web oficial (página de acceso) y un panel de administración en /vaultwarden/admin para gestionar usuarios, organizaciones, invitaciones, notificaciones WebSocket y adjuntos. Todas las extensiones de navegador y aplicaciones Bitwarden (escritorio y móvil) se conectan a través de la ruta /vaultwarden/. Se ejecuta como usuario dedicado sin privilegios en un sandbox systemd reforzado; los datos se guardan en /var/lib/vaultwarden. Política de privacidad: /vaultwarden/privacy-policy.html."
@@ -55,7 +55,7 @@ release_note = "Incluye el servidor oficial Vaultwarden @@UPSTREAM@@ compilado d
 important    = "La bóveda web en el navegador necesita HTTPS para desbloquearse (restricción de contexto seguro de WebCrypto, inherente a todas las bóvedas web de Bitwarden). En una LAN HTTP simple usa las apps/extensiones Bitwarden, o activa HTTPS en el NAS / coloca un proxy inverso. Tras instalar, abre la página y crea tu cuenta de inmediato: la primera persona registrada es la propietaria; desactiva luego el registro libre (SIGNUPS_ALLOWED). 'apt remove' conserva /var/lib/vaultwarden, 'apt purge' borra toda la base de datos."
 
 [ja-jp]
-name         = "Vaultwarden パスワードマネージャー"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden は Rust で書かれたセルフホスト型のパスワード管理サーバーで、Bitwarden と完全互換です。公式ウェブ保管庫（ログインページ）と /vaultwarden/admin の管理パネルを同梱し、ユーザー・組織・招待・WebSocket 通知・添付ファイルを管理できます。Bitwarden のブラウザ拡張・デスクトップ・モバイルアプリはすべて /vaultwarden/ ルート経由で接続します。専用の非特権ユーザーとして強化された systemd サンドボックス内で動作し、データは /var/lib/vaultwarden に保存されます。プライバシーポリシー：/vaultwarden/privacy-policy.html。"
@@ -63,7 +63,7 @@ release_note = "公式ソースリリースからビルドした Vaultwarden @@U
 important    = "ブラウザのウェブ保管庫はロック解除に HTTPS が必要です（WebCrypto のセキュアコンテキスト制限により、Bitwarden ウェブ版すべてに共通）。HTTP の LAN では各種アプリ／拡張機能を使うか、NAS で HTTPS を有効化／リバースプロキシを設置してください。インストール後すぐにページを開いてアカウントを作成してください（最初に登録した人が保管庫の所有者になります）。その後、自由な新規登録（SIGNUPS_ALLOWED）を無効化してください。'apt remove' は /var/lib/vaultwarden を保持し、'apt purge' はデータベース全体を削除します。"
 
 [ko-kr]
-name         = "Vaultwarden 비밀번호 관리자"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden은 Rust로 작성된 자체 호스팅 비밀번호 관리 서버로 Bitwarden과 완전히 호환됩니다. 공식 웹 금고(로그인 페이지)와 /vaultwarden/admin 관리 패널을 포함하여 사용자, 조직, 초대, WebSocket 알림, 첨부 파일을 관리할 수 있습니다. Bitwarden 브라우저 확장, 데스크톱 및 모바일 앱은 모두 /vaultwarden/ 라우트를 통해 연결됩니다. 전용 비특권 사용자로 강화된 systemd 샌드박스에서 실행되며 데이터는 /var/lib/vaultwarden에 저장됩니다. 개인정보 처리방침: /vaultwarden/privacy-policy.html."
@@ -71,7 +71,7 @@ release_note = "공식 소스 릴리스에서 빌드한 Vaultwarden @@UPSTREAM@@
 important    = "브라우저 웹 금고의 잠금 해제에는 HTTPS가 필요합니다(WebCrypto 보안 컨텍스트 제한, 모든 Bitwarden 웹 버전에 내재됨). HTTP LAN에서는 각종 앱/확장 기능을 사용하거나 NAS에서 HTTPS를 활성화/리버스 프록시를 구성하세요. 설치 후 즉시 페이지를 열어 계정을 만드세요(첫 등록자가 금고 소유자가 됨). 이후 자유 가입(SIGNUPS_ALLOWED)을 비활성화하세요. 'apt remove'는 /var/lib/vaultwarden을 유지하고 'apt purge'는 전체 데이터베이스를 삭제합니다."
 
 [ru-ru]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden — автономный сервер менеджера паролей, совместимый с Bitwarden, написанный на Rust. Включает официальное веб-хранилище (страница входа) и панель администрирования /vaultwarden/admin для управления пользователями, организациями, приглашениями, WebSocket-уведомлениями и вложениями. Все расширения браузера и приложения Bitwarden (настольные и мобильные) подключаются через маршрут /vaultwarden/. Работает от выделенного непривилегированного пользователя в усиленной песочнице systemd; данные хранятся в /var/lib/vaultwarden. Политика конфиденциальности: /vaultwarden/privacy-policy.html."
@@ -79,7 +79,7 @@ release_note = "Включает сервер Vaultwarden @@UPSTREAM@@, собр
 important    = "Веб-хранилищу в браузере для разблокировки нужен HTTPS (ограничение защищённого контекста WebCrypto, присущее всем веб-хранилищам Bitwarden). В HTTP-локальной сети используйте приложения/расширения Bitwarden либо включите HTTPS на NAS / поставьте reverse proxy. Сразу после установки откройте страницу и создайте аккаунт: первый зарегистрировавшийся владеет хранилищем; затем отключите свободную регистрацию (SIGNUPS_ALLOWED). 'apt remove' сохраняет /var/lib/vaultwarden, 'apt purge' удаляет всю базу целиком."
 
 [pt-pt]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "O Vaultwarden é um servidor de gestão de palavras-passe autoalojado, compatível com o Bitwarden, escrito em Rust. Inclui o cofre web oficial (página de início de sessão) e um painel de administração em /vaultwarden/admin para gerir utilizadores, organizações, convites, notificações WebSocket e anexos. Todas as extensões de navegador e aplicações Bitwarden (desktop e móveis) ligam-se através da rota /vaultwarden/. Corre como utilizador dedicado sem privilégios numa sandbox systemd reforçada; os dados ficam em /var/lib/vaultwarden. Política de privacidade: /vaultwarden/privacy-policy.html."
@@ -87,7 +87,7 @@ release_note = "Inclui o servidor Vaultwarden @@UPSTREAM@@ compilado a partir do
 important    = "O cofre web no navegador precisa de HTTPS para desbloquear (restrição de contexto seguro do WebCrypto, inerente a todos os cofres web Bitwarden). Numa LAN em HTTP simples use as apps/extensões Bitwarden, ou ative HTTPS no NAS / coloque um reverse proxy à frente. Após a instalação, abra a página e crie já a sua conta: a primeira pessoa a registar é a proprietária do cofre; depois desative o registo livre (SIGNUPS_ALLOWED). O 'apt remove' conserva /var/lib/vaultwarden, o 'apt purge' apaga toda a base de dados."
 
 [nl-nl]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden is een zelf gehoste, Bitwarden-compatibele wachtwoordbeheerserver, geschreven in Rust. Het bevat de officiële webkluis (inlogpagina) en een beheerpaneel op /vaultwarden/admin voor het beheren van gebruikers, organisaties, uitnodigingen, WebSocket-meldingen en bijlagen. Alle Bitwarden-browserextensies en apps (desktop en mobiel) verbinden zich via de route /vaultwarden/. Draait als een speciale niet-geprivilegieerde gebruiker in een verharde systemd-sandbox; gegevens staan in /var/lib/vaultwarden. Privacybeleid: /vaultwarden/privacy-policy.html."
@@ -95,7 +95,7 @@ release_note = "Bevat de officiële Vaultwarden-server @@UPSTREAM@@, gebouwd van
 important    = "De webkluis in de browser heeft HTTPS nodig om te ontgrendelen (WebCrypto secure-context-beperking, inherent aan alle Bitwarden-webkluizen). Op een plain-HTTP LAN gebruikt u de Bitwarden-apps/-extensies, of schakelt u HTTPS in op de NAS / plaatst u een reverse proxy ervoor. Open na installatie direct de pagina en maak uw account aan: wie zich eerst registreert, bezit de kluis; schakel daarna open registratie uit (SIGNUPS_ALLOWED). 'apt remove' behoudt /var/lib/vaultwarden, 'apt purge' verwijdert de hele database."
 
 [pl-pl]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden to samodzielnie hostowany, zgodny z Bitwarden serwer do zarządzania hasłami, napisany w Rust. Zawiera oficjalny sejf internetowy (strona logowania) oraz panel administracyjny pod /vaultwarden/admin do zarządzania użytkownikami, organizacjami, zaproszeniami, powiadomieniami WebSocket i załącznikami. Wszystkie rozszerzenia przeglądarki oraz aplikacje Bitwarden (desktop i mobilne) łączą się przez trasę /vaultwarden/. Działa jako dedykowany nieuprzywilejowany użytkownik w wzmocnionej piaskownicy systemd; dane są przechowywane w /var/lib/vaultwarden. Polityka prywatności: /vaultwarden/privacy-policy.html."
@@ -103,7 +103,7 @@ release_note = "Zawiera serwer Vaultwarden @@UPSTREAM@@ zbudowany z oficjalnego 
 important    = "Sejf internetowy w przeglądarce wymaga HTTPS do odblokowania (ograniczenie bezpiecznego kontekstu WebCrypto, nieodłączne dla wszystkich sejfów web Bitwarden). W LAN-ie na czystym HTTP używaj aplikacji/rozszerzeń Bitwarden albo włącz HTTPS na NAS-ie / postaw reverse proxy. Po instalacji natychmiast otwórz stronę i utwórz konto: pierwsza osoba, która się zarejestruje, jest właścicielem sejfu; następnie wyłącz otwartą rejestrację (SIGNUPS_ALLOWED). 'apt remove' zachowuje /var/lib/vaultwarden, 'apt purge' usuwa całą bazę danych."
 
 [tr-tr]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden, Rust ile yazılmış, Bitwarden uyumlu, kendi kendine barındırılan bir parola yönetim sunucusudur. Resmî web kasasını (oturum açma sayfası) ve kullanıcıları, kuruluşları, davetleri, WebSocket bildirimlerini ve ekleri yönetebileceğiniz /vaultwarden/admin yönetim panelini içerir. Tüm Bitwarden tarayıcı eklentileri ile masaüstü ve mobil uygulamalar /vaultwarden/ rotası üzerinden bağlanır. Ayrıcalıksız adanmış bir kullanıcı olarak sertleştirilmiş bir systemd korumalı alanında çalışır; veriler /var/lib/vaultwarden içinde saklanır. Gizlilik politikası: /vaultwarden/privacy-policy.html."
@@ -111,7 +111,7 @@ release_note = "Resmî kaynak sürümünden derlenen Vaultwarden @@UPSTREAM@@ su
 important    = "Tarayıcıdaki web kasasının kilidini açmak için HTTPS gerekir (WebCrypto güvenli bağlam kısıtı; tüm Bitwarden web kasalarında vardır). Düz HTTP LAN'da Bitwarden uygulamalarını/eklentilerini kullanın ya da NAS'ta HTTPS'yi etkinleştirin / öne bir reverse proxy koyun. Kurulumdan sonra sayfayı hemen açıp hesabınızı oluşturun: ilk kaydolan kişi kasasının sahibidir; ardından açık kaydı (SIGNUPS_ALLOWED) kapatın. 'apt remove' /var/lib/vaultwarden'i korur, 'apt purge' tüm veritabanını siler."
 
 [hu-hu]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "A Vaultwarden egy saját üzemeltetésű, Bitwarden-kompatibilis jelszókezelő kiszolgáló, Rust nyelven írva. Tartalmazza a hivatalos webes széfet (bejelentkezési oldal) és a /vaultwarden/admin adminisztrációs panelt a felhasználók, szervezetek, meghívók, WebSocket-értesítések és mellékletek kezeléséhez. Minden Bitwarden böngészőbővítmény valamint asztali és mobilalkalmazás a /vaultwarden/ útvonalon keresztül kapcsolódik. Dedikált, nem kiemelt felhasználóként fut, megerősített systemd homokozóban; az adatok a /var/lib/vaultwarden könyvtárban tárolódnak. Adatvédelmi tájékoztató: /vaultwarden/privacy-policy.html."
@@ -119,7 +119,7 @@ release_note = "A hivatalos forráskiadásból fordított Vaultwarden @@UPSTREAM
 important    = "A böngészős webes széf feloldásához HTTPS kell (WebCrypto biztonságos kontextus-korlát, minden Bitwarden webes széfben jelen van). Egyszerű HTTP-s hálózatban használja a Bitwarden alkalmazásokat/bővítményeket, vagy engedélyezze a HTTPS-et a NAS-on / tegyen elé reverse proxy-t. Telepítés után azonnal nyissa meg az oldalt, és hozza létre fiókját: aki először regisztrál, a széf tulajdonosa; ezt után kapcsolja ki a nyílt regisztrációt (SIGNUPS_ALLOWED). Az 'apt remove' megtartja a /var/lib/vaultwarden-t, az 'apt purge' törli a teljes adatbázist."
 
 [sv-se]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden är en egenvärd, Bitwarden-kompatibel lösenordshanteringsserver skriven i Rust. Den innehåller det officiella webbvalvet (inloggningssida) och en administrationspanel på /vaultwarden/admin för att hantera användare, organisationer, inbjudningar, WebSocket-aviseringar och bilagor. Alla Bitwarden-webbläsartillägg samt desktop- och mobilappar ansluter via rutten /vaultwarden/. Körs som en dedikerad opriviligierad användare i en förhärdad systemd-sandlåda; data lagras i /var/lib/vaultwarden. Integritetspolicy: /vaultwarden/privacy-policy.html."
@@ -127,7 +127,7 @@ release_note = "Innehåller Vaultwarden-servern @@UPSTREAM@@, byggd från den of
 important    = "Webbvalvet i webbläsaren kräver HTTPS för att låsa upp (WebCryptos krav på säker kontext, inneboende i alla Bitwarden-webbvalv). På ett LAN med ren HTTP använder du Bitwarden-apparna/tilläggen, eller aktiverar HTTPS på NAS:en / sätter en reverse proxy framför. Öppna sidan direkt efter installationen och skapa ditt konto: den första som registrerar sig äger valvet; stäng sedan öppen registrering (SIGNUPS_ALLOWED). 'apt remove' behåller /var/lib/vaultwarden, 'apt purge' raderar hela databasen."
 
 [cs-cz]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden je vlastní hostovaný server správce hesel kompatibilní s Bitwarden, napsaný v Rustu. Obsahuje oficiální webový trezor (přihlašovací stránku) a administrační panel na /vaultwarden/admin pro správu uživatelů, organizací, pozvánek, WebSocket notifikací a příloh. Všechna rozšíření prohlížeče i aplikace Bitwarden (desktopové a mobilní) se připojují přes cestu /vaultwarden/. Běží jako vyhrazený neprivilegovaný uživatel v zpevněném sandboxu systemd; data jsou uložena v /var/lib/vaultwarden. Zásady soukromí: /vaultwarden/privacy-policy.html."
@@ -135,7 +135,7 @@ release_note = "Obsahuje server Vaultwarden @@UPSTREAM@@ sestavený z oficiáln�
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [ar-sa]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "‏Vaultwarden خادم إدارة كلمات مرور ذاتي الاستضافة متوافق مع Bitwarden ومكتوب بلغة Rust. يتضمن خزنة الويب الرسمية (صفحة تسجيل الدخول) ولوحة إدارة على /vaultwarden/admin لإدارة المستخدمين والمؤسسات والدعوات وإشعارات WebSocket والمرفقات. تتصل جميع إضافات المتصفح وتطبيقات Bitwarden (سطح المكتب والجوال) عبر المسار /vaultwarden/. يعمل بمستخدم مخصص بدون صلاحيات داخل بيئة systemd معززة؛ تُخزَّن البيانات في /var/lib/vaultwarden. سياسة الخصوصية: /vaultwarden/privacy-policy.html."
@@ -143,7 +143,7 @@ release_note = "يتضمن خادم Vaultwarden @@UPSTREAM@@ المُجمَّع 
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [he-il]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden הוא שרת ניהול סיסמאות עצמאי תואם Bitwarden שנכתב ב-Rust. כולל את כספת האינטרנט הרשמית (עמוד ההתחברות) ולוח ניהול בכתובת /vaultwarden/admin לניהול משתמשים, ארגונים, הזמנות, התראות WebSocket וקבצים מצורפים. כל הרחבות הדפדפן והאפליקציות של Bitwarden (שולחניות וניידות) מתחברות דרך הנתיב /vaultwarden/. פועל תחת משתמש ייעודי ללא הרשאות בסביבת systemd מוקשחת; הנתונים נשמרים ב-/var/lib/vaultwarden. מדיניות פרטיות: /vaultwarden/privacy-policy.html."
@@ -151,7 +151,7 @@ release_note = "כולל את שרת Vaultwarden @@UPSTREAM@@ שנבנה ממה�
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [id-id]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden adalah server manajemen kata sandi yang di-hosting sendiri, kompatibel dengan Bitwarden, dan ditulis dalam Rust. Menyertakan web vault resmi (halaman masuk) dan panel admin di /vaultwarden/admin untuk mengelola pengguna, organisasi, undangan, notifikasi WebSocket, dan lampiran. Semua ekstensi peramban serta aplikasi desktop dan seluler Bitwarden terhubung melalui rute /vaultwarden/. Berjalan sebagai pengguna khusus tanpa hak istimewa dalam sandbox systemd yang diperketat; data disimpan di /var/lib/vaultwarden. Kebijakan privasi: /vaultwarden/privacy-policy.html."
@@ -159,7 +159,7 @@ release_note = "Menyertakan server Vaultwarden @@UPSTREAM@@ yang dibangun dari r
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [nb-no]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden er en selvdrevet, Bitwarden-kompatibel passordbehandlingstjener skrevet i Rust. Den inneholder det offisielle netthvelvet (innloggingsside) og en administrasjonspanel på /vaultwarden/admin for å administrere brukere, organisasjoner, invitasjoner, WebSocket-varsler og vedlegg. Alle Bitwarden-utvidelser og apper (skrivebord og mobil) kobler til via ruten /vaultwarden/. Kjører som en dedikert uprivilegert bruker i en herdet systemd-sandkasse; data lagres i /var/lib/vaultwarden. Personvernerklæring: /vaultwarden/privacy-policy.html."
@@ -167,7 +167,7 @@ release_note = "Inneholder Vaultwarden-tjeneren @@UPSTREAM@@ bygget fra den offi
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [th-th]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden เป็นเซิร์ฟเวอร์จัดการรหัสผ่านแบบ self-hosted ที่เข้ากันได้กับ Bitwarden เขียนด้วยภาษา Rust มาพร้อม web vault อย่างเป็นทางการ (หน้าเข้าสู่ระบบ) และแผงผู้ดูแลที่ /vaultwarden/admin สำหรับจัดการผู้ใช้ องค์กร คำเชิญ การแจ้งเตือน WebSocket และไฟล์แนบ ส่วนขยายเบราว์เซอร์และแอป Bitwarden ทุกแพลตฟอร์มเชื่อมต่อผ่านเส้นทาง /vaultwarden/ ทำงานด้วยผู้ใช้เฉพาะที่ไม่มีสิทธิ์พิเศษใน sandbox แบบ systemd ที่เข้มงวด ข้อมูลเก็บใน /var/lib/vaultwarden นโยบายความเป็นส่วนตัว: /vaultwarden/privacy-policy.html"
@@ -175,7 +175,7 @@ release_note = "มาพร้อมเซิร์ฟเวอร์ Vaultward
 important    = "The browser web vault needs HTTPS to unlock (browser WebCrypto secure-context restriction, inherent to all Bitwarden web vaults). On a plain-HTTP LAN use the Bitwarden apps/extensions, or enable HTTPS on the NAS / put a reverse proxy in front. After install, open the page immediately and create your account: the first person to register owns the vault; then disable open sign-ups (SIGNUPS_ALLOWED) or use the admin panel. 'apt remove' keeps /var/lib/vaultwarden, 'apt purge' deletes your entire vault database."
 
 [vi-vn]
-name         = "Vaultwarden Password Manager"
+name         = "Vaultwarden"
 auth         = "Daniel García"
 version      = "@@VERSION@@"
 descript     = "Vaultwarden là máy chủ quản lý mật khẩu tự lưu trữ, tương thích với Bitwarden, được viết bằng Rust. Kèm theo kho web chính thức (trang đăng nhập) và bảng quản trị tại /vaultwarden/admin để quản lý người dùng, tổ chức, lời mời, thông báo WebSocket và tệp đính kèm. Mọi tiện ích mở rộng trình duyệt và ứng dụng Bitwarden (máy tính & di động) kết nối qua tuyến /vaultwarden/. Chạy bằng người dùng chuyên dụng không đặc quyền trong sandbox systemd được gia cố; dữ liệu nằm trong /var/lib/vaultwarden. Chính sách quyền riêng tư: /vaultwarden/privacy-policy.html."

@@ -92,13 +92,13 @@ if re.search(r'(^|[^a-zA-Z])beta([^a-zA-Z]|$)', text, re.I):
     err("lang: 文案含 beta 字样（V11 文案门禁） ✗")
 else:
     print("lang: 无 beta 字样 ✓")
-publisher = env_value("PUBLISHER")
-if publisher:
-    n_auth = text.count(f'auth         = "{publisher}"')
+author = env_value("AUTHOR")
+if author:
+    n_auth = text.count(f'auth         = "{author}"')
     if n_auth == len(REQUIRED_LANGS):
-        print(f"lang: 各语 auth 均为上游署名 {publisher!r} ✓")
+        print(f"lang: 各语 auth 均为上游作者 {author!r} ✓")
     else:
-        err(f"lang: auth 与 config.env PUBLISHER 不一致（{n_auth}/{len(REQUIRED_LANGS)}） ✗")
+        err(f"lang: auth 与 config.env AUTHOR 不一致（{n_auth}/{len(REQUIRED_LANGS)}） ✗")
 # 直开端口表述残留（D-001 已废止）
 if re.search(r':8222|0\.0\.0\.0', text):
     err("lang: 残留直开端口/0.0.0.0 表述（应统一为 /%s/ 路由） ✗" % APP_ID)

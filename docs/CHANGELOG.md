@@ -20,8 +20,9 @@
 - 数据目录 /var/lib/vaultwarden：apt remove 保留、apt purge 彻底清除。
 - systemd 沙箱加固（专用非特权用户、ProtectSystem=strict 等）；
   DOMAIN 默认路径前缀 /vaultwarden 与网关路由联动（origin 可改）。
-- 署名：publisher/.lang auth = 上游作者 Daniel García；Maintainer =
-  打包者，Description 尾注明示分工。
+- 署名（D-013）：.lang auth = 上游作者 Daniel García；publisher = Moechz（发布者）；
+  help = TOS 论坛帖；official = 上游 wiki；应用名统一 "Vaultwarden"；
+  Maintainer = 打包者，Description 尾注明示分工。
 
 ### Notes
 - 网页保管库在浏览器中解锁需要 HTTPS（Bitwarden 网页版固有的 WebCrypto

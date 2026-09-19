@@ -105,11 +105,17 @@
 - 内容如实披露：零遥测、数据本地 SQLite、favicon 默认会向条目站点发起出站请求（及关闭方法）、SMTP/FIDO2 可选。
 - 精确匹配 location 优先于前缀反代，无冲突（sftpgo 同模式）。
 
-### D-013: 署名分工（坑 49）：publisher/auth = 上游，Maintainer = 打包者
-**Decision:** config.ini 的 publisher 与 .lang 各语 auth 填上游作者 "Daniel García"；DEBIAN/control Maintainer 仍为打包者（Moechz），Description 尾注注明 "Upstream author … packaged for TOS by …"。
+### D-013: 署名与字段定夺（2026-09-19 用户定夺，替代早前"publisher=上游"方案）
+**Decision:** 四字段分工如下——
+- `.lang` 各语 `auth` = "Daniel García"（上游原始作者；体现作者归上游）
+- `config.ini` 的 `publisher` = "Moechz"（本包发布者/打包者）
+- `config.ini` 的 `help` = https://forum.terra-master.com/en/viewtopic.php?t=10596（TOS 论坛帖）
+- `config.ini` 的 `official` = https://github.com/dani-garcia/vaultwarden/wiki（上游 wiki）
+- `.lang` 各语 `name` 统一 "Vaultwarden"（短名）；control Maintainer 仍为打包者，Description 尾注保留 "Upstream author … packaged for TOS by …" 分工说明。
 **Consequences:**
-- 反映真实权益归属，符合商店对"应用来源真实性"的审核口径；避免用打包者名义冒充应用作者。
-- official 字段指向本仓库（审核员发现源码/CI/溯源材料的入口，坑 30a 机器验链可达）；help 字段指向上游 wiki。
+- "作者（auth）归上游、发布者（publisher）归打包者"的语义分工；与 hermes（publisher=Moechz）一致。
+- official 指向上游 wiki：用户点它查的是产品官方资料；打包仓库（CI/溯源）仍可经 deb 内 PROVENANCE.md 与 Release 链条发现，V6 材料不依赖 official 字段。
+- check_assets 断言 23 语 auth 统一等于 config.env AUTHOR，防逐语漂移。
 
 ### D-014: webui.bz2 用 python tarfile 规范重打（S11）
 **Decision:** stage 阶段不再用 macOS bsdtar 打 webui.bz2，改为 Python tarfile（GNU_FORMAT，全部成员 uid/gid=0、uname/gname=root、mtime=0、mode 0644）；verify 断言归档内每个成员的 uid/gid/mtime 均 = 0。

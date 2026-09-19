@@ -226,7 +226,6 @@ PYEOF
   sed -e "s|@@VERSION@@|$VERSION_FULL|g" \
       -e "s|@@PUBLISHER@@|$PUBLISHER|g" \
       -e "s|@@PLATFORM@@|$TOS_PLATFORM|g" \
-      -e "s|@@REPO_URL@@|$REPO_URL|g" \
       "$ASSETS_DIR/config.ini.in" > "$APP/config.ini"
 
   # 多语言文件（文件名必须等于 app id；23 语超集覆盖两个官方口径）
