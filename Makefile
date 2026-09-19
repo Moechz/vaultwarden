@@ -39,5 +39,5 @@ check:
 	sed -e 's|@VERSION@|0.0.0|g' assets/prerm   | bash -n
 	sed -e 's|@VERSION@|0.0.0|g' assets/postrm  | bash -n
 	sed -e 's|@VERSION@|0.0.0|g' assets/preinst | bash -n
-	python3 -m py_compile scripts/fetch_image.py scripts/check_assets.py
+	python3 -m py_compile scripts/fetch_image.py scripts/fetch_release.py scripts/check_assets.py
 	python3 scripts/check_assets.py

@@ -1,0 +1,187 @@
+# ============================================================
+# release.yml — Vaultwarden for TOS 源码构建与发布（V6 审核合规链）
+#
+# 产物：本仓库 Release 下的 CI 自建静态二进制 + 官方 web vault
+#   vaultwarden-<x86_64|aarch64>.tar.gz   static-pie musl 二进制
+#   web-vault-<ver>.tar.gz                bw_web_builds 官方发布原样再分发
+#   SHA256SUMS                            全部资产 + 解包后二进制本体
+#
+# 构建配方与上游 docker/Dockerfile.alpine（1.37.3）逐字一致：
+#   容器    ghcr.io/blackdex/rust-musl:<arch>-musl-stable-1.98.1
+#   环境    PQ_LIB_DIR=/usr/local/musl/pq17/lib（容器预设 CARGO_BUILD_TARGET）
+#   命令    cargo build --features sqlite,mysql,postgresql,enable_mimalloc \
+#             --profile release --target "$CARGO_BUILD_TARGET"
+#   版本    VW_VERSION=<tag>（build.rs 嵌入，与官方 Docker ARG 同源）
+#
+# 版本来源：本仓库根目录 config.env（与打包 fetch 同一配置源）
+# ============================================================
+name: build-release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      vw: ${{ steps.cfg.outputs.vw }}
+      webvault: ${{ steps.cfg.outputs.webvault }}
+    steps:
+      - name: 读取 config.env 版本（唯一配置源）
+        id: cfg
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/config.env" -o config.env
+          vw=$(grep -E '^VAULTWARDEN_VERSION=' config.env | cut -d= -f2 | tr -d '"')
+          wv=$(grep -E '^WEB_VAULT_VERSION=' config.env | cut -d= -f2 | tr -d '"')
+          echo "vw=$vw" >> "$GITHUB_OUTPUT"
+          echo "webvault=$wv" >> "$GITHUB_OUTPUT"
+          echo "Vaultwarden $vw / web vault $wv"
+
+  build:
+    needs: vars
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - musl_arch: x86_64
+            runner: ubuntu-latest
+            plat: x86_64
+          - musl_arch: aarch64
+            runner: ubuntu-24.04-arm
+            plat: aarch64
+    runs-on: ${{ matrix.runner }}
+    container: ghcr.io/blackdex/rust-musl:${{ matrix.musl_arch }}-musl-stable-1.98.1
+    env:
+      VW_VERSION: ${{ needs.vars.outputs.vw }}
+      PQ_LIB_DIR: /usr/local/musl/pq17/lib
+    steps:
+      - name: 拉取上游源码（钉死 tag ${{ needs.vars.outputs.vw }}）
+        run: |
+          set -eux
+          curl -fsSL --retry 5 \
+            "https://github.com/dani-garcia/vaultwarden/archive/refs/tags/${VW_VERSION}.tar.gz" \
+            -o /tmp/src.tar.gz
+          tar -xzf /tmp/src.tar.gz -C /tmp
+          cd "/tmp/vaultwarden-${VW_VERSION}"
+
+      - name: 构建（与上游 alpine 镜像配方逐字一致）
+        run: |
+          set -eux
+          cd "/tmp/vaultwarden-${VW_VERSION}"
+          cargo build \
+            --features sqlite,mysql,postgresql,enable_mimalloc \
+            --profile release \
+            --target "${CARGO_BUILD_TARGET}"
+          file "target/${CARGO_BUILD_TARGET}/release/vaultwarden"
+
+      - name: 打包资产
+        run: |
+          set -eux
+          cd "/tmp/vaultwarden-${VW_VERSION}"
+          install -Dm755 "target/${CARGO_BUILD_TARGET}/release/vaultwarden" \
+            "/tmp/out/vaultwarden"
+          tar -czf "/tmp/vaultwarden-${{ matrix.plat }}.tar.gz" -C /tmp/out vaultwarden
+          # 二进制本体单列一条（SHA256SUMS 引用，打包 fetch 双重校验）
+          cd /tmp/out && sha256sum vaultwarden > "/tmp/vaultwarden-${{ matrix.plat }}.sha256"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.plat }}
+          path: |
+            /tmp/vaultwarden-${{ matrix.plat }}.tar.gz
+            /tmp/vaultwarden-${{ matrix.plat }}.sha256
+          if-no-files-found: error
+
+  webvault:
+    needs: vars
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载 bw_web_builds 官方发布（钉死 tag v${{ needs.vars.outputs.webvault }}）
+        run: |
+          set -eux
+          v="${{ needs.vars.outputs.webvault }}"
+          base="https://github.com/dani-garcia/bw_web_builds/releases/download/v${v}"
+          curl -fsSL --retry 5 "${base}/bw_web_v${v}.tar.gz" -o "web-vault-${v}.tar.gz"
+          # 官方 sha256 文件存在则校验（存在性探测，不作为唯一校验）
+          if curl -fsSL --retry 3 "${base}/bw_web_v${v}.tar.gz.sha256" -o official.sha256; then
+            echo "$(cat official.sha256 | awk '{print $1}')  web-vault-${v}.tar.gz" | sha256sum -c -
+          else
+            sha256sum "web-vault-${v}.tar.gz"
+          fi
+          tar -tzf "web-vault-${v}.tar.gz" | head -3
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: webvault
+          path: web-vault-*.tar.gz
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [vars, build, webvault]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 汇集产物
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: assets
+      - name: 生成 SHA256SUMS
+        run: |
+          set -eux
+          cd assets
+          : > SHA256SUMS
+          for f in vaultwarden-*.tar.gz web-vault-*.tar.gz; do
+            sha256sum "$f" >> SHA256SUMS
+          done
+          # 解包后二进制本体（fetch_release.py 的钉死校验来源）
+          for p in x86_64 aarch64; do
+            if [ -f "vaultwarden-${p}.sha256" ]; then
+              awk -v n="vaultwarden-${p}" '{print $1"  "n}' "vaultwarden-${p}.sha256" >> SHA256SUMS
+            fi
+          done
+          cat SHA256SUMS
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VW: ${{ needs.vars.outputs.vw }}
+          WEBVAULT: ${{ needs.vars.outputs.webvault }}
+        run: |
+          set -eux
+          body=$(cat <<EOF
+          ## Vaultwarden for TOS — build artifacts
+
+          CI-built static (musl) binaries of upstream Vaultwarden **${VW}**,
+          plus the official web vault **${WEBVAULT}** from bw_web_builds.
+
+          - Upstream source: https://github.com/dani-garcia/vaultwarden (tag ${VW})
+          - Build recipe: mirrors upstream docker/Dockerfile.alpine for ${VW}
+            (container \`ghcr.io/blackdex/rust-musl:<arch>-musl-stable-1.98.1\`,
+            \`cargo build --features sqlite,mysql,postgresql,enable_mimalloc --profile release\`)
+          - Web vault: https://github.com/dani-garcia/bw_web_builds (tag v${WEBVAULT}),
+            redistributed unmodified
+          - Integrity: SHA256SUMS covers every asset and the unpacked binaries
+          - How to verify / reproduce: see VERIFICATION.md in this repository
+          EOF
+          )
+          gh release create "$TAG" --title "$TAG" --notes "$body" \
+            assets/vaultwarden-x86_64.tar.gz \
+            assets/vaultwarden-aarch64.tar.gz \
+            assets/web-vault-*.tar.gz \
+            assets/SHA256SUMS \
+            || gh release upload "$TAG" --clobber \
+            assets/vaultwarden-x86_64.tar.gz \
+            assets/vaultwarden-aarch64.tar.gz \
+            assets/web-vault-*.tar.gz \
+            assets/SHA256SUMS

@@ -1,0 +1,36 @@
+# Dockerfile.repro — 在与 CI 完全相同的容器里复现 vaultwarden 二进制
+# 用法（x86_64）:
+#   docker build -f Dockerfile.repro --build-arg MUSL_ARCH=x86_64 \
+#     --build-arg VW_VERSION=1.37.3 -t vw-repro .
+#   docker run --rm vw-repro sha256sum /out/vaultwarden
+#
+# 与 .github/workflows/release.yml 及上游 docker/Dockerfile.alpine 同配方：
+#   ghcr.io/blackdex/rust-musl:<arch>-musl-stable-1.98.1
+#   cargo build --features sqlite,mysql,postgresql,enable_mimalloc \
+#     --profile release --target "$CARGO_BUILD_TARGET"
+ARG MUSL_ARCH=x86_64
+FROM ghcr.io/blackdex/rust-musl:${MUSL_ARCH}-musl-stable-1.98.1
+
+ARG VW_VERSION=1.37.3
+ENV PQ_LIB_DIR=/usr/local/musl/pq17/lib
+
+RUN --mount=type=cache,target=/tmp/src \
+    set -eux; \
+    cd /tmp; \
+    curl -fsSL --retry 5 \
+      "https://github.com/dani-garcia/vaultwarden/archive/refs/tags/${VW_VERSION}.tar.gz" \
+      -o src.tar.gz; \
+    tar -xzf src.tar.gz; \
+    cd "vaultwarden-${VW_VERSION}"; \
+    cargo build \
+      --features sqlite,mysql,postgresql,enable_mimalloc \
+      --profile release \
+      --target "${CARGO_BUILD_TARGET}"; \
+    mkdir -p /out; \
+    install -m 0755 \
+      "target/${CARGO_BUILD_TARGET}/release/vaultwarden" \
+      /out/vaultwarden; \
+    file /out/vaultwarden; \
+    sha256sum /out/vaultwarden
+
+# docker run --rm vw-repro cat /out/vaultwarden > vaultwarden

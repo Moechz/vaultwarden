@@ -36,20 +36,20 @@ case "$1" in
     #    web-vault 数千文件由 dpkg 随包展开，属主统一收敛）
     chown -R $APP_USER:$APP_USER "$APP_DIR" 2>/dev/null || true
 
-    # 3. webui.bz2 解压（官方模板行为；直开端口模式下为占位跳转页）
+    # 3. webui.bz2 解压（官方模板行为；路由模式下为入口跳转页）
     if [ -f "$APP_DIR/webui.bz2" ]; then
       ( cd "$APP_DIR" && tar -xjf webui.bz2 2>/dev/null || true )
     fi
 
     # 4. 配置文件首装引导：仅在不存在时从随包模板复制（升级永不覆盖用户配置）
-    #    并生成随机 ADMIN_TOKEN（管理后台 /admin 的口令；只在此处生成，
+    #    并生成随机 ADMIN_TOKEN（管理后台 /vaultwarden/admin 的口令；只在此处生成，
     #    绝不打印到安装输出/日志，防止经 App Center 日志泄露）
     if [ ! -e "$APP_DIR/vaultwarden.env" ] && [ -e "$APP_DIR/vaultwarden.env.example" ]; then
       install -m 0640 -o $APP_USER -g $APP_USER \
         "$APP_DIR/vaultwarden.env.example" "$APP_DIR/vaultwarden.env"
       tok=$(gen_token)
       if [ -n "$tok" ]; then
-        printf '\n# ↓ 首装自动生成的管理后台令牌（/admin 登录用；可自行更换或改为 argon2 哈希）\nADMIN_TOKEN=%s\n' \
+        printf '\n# ↓ 首装自动生成的管理后台令牌（/vaultwarden/admin 登录用；可自行更换或改为 argon2 哈希）\nADMIN_TOKEN=%s\n' \
           "$tok" >> "$APP_DIR/vaultwarden.env"
         chown $APP_USER:$APP_USER "$APP_DIR/vaultwarden.env"
         pkg_log postinst bootstrap "vaultwarden.env + ADMIN_TOKEN 首装生成"
@@ -75,8 +75,9 @@ case "$1" in
       systemctl start vaultwarden.service 2>/dev/null || true
     fi
 
-    # 7. nginx 兜底跳转（302 /vaultwarden/ → :8222；平台会加载 nginx/<appid>.conf，
-    #    此处在系统 nginx conf.d 兜底注册）。写入后立即 nginx -t 校验，失败即回滚，
+    # 7. nginx 网关路由（保留前缀反代 127.0.0.1:8222 + 隐私政策精确路由；
+    #    平台会加载 nginx/<appid>.conf，此处往系统 nginx conf.d 镜像注册）。
+    #    写入后立即 nginx -t 校验，失败即回滚，
     #    绝不留下导致 nginx 无法 reload 的配置（原生 Ubuntu 的 conf.d 在 http 层）
     if command -v nginx > /dev/null 2>&1 && [ -d /etc/nginx/conf.d ]; then
       install -m 0644 "$APP_DIR/nginx/vaultwarden.conf" \
@@ -92,14 +93,14 @@ case "$1" in
     # 8. 就绪检查（curl 轮询 /alive，30s 上限；超时打印有限状态快照，不阻塞安装）
     ok=""
     for i in $(seq 1 15); do
-      if curl -sf -o /dev/null --max-time 2 http://127.0.0.1:8222/alive 2>/dev/null; then
+      if curl -sf -o /dev/null --max-time 2 http://127.0.0.1:8222/vaultwarden/alive 2>/dev/null; then
         ok=1
         break
       fi
       sleep 2
     done
     if [ -n "$ok" ]; then
-      pkg_log postinst "vaultwarden /alive ok"
+      pkg_log postinst "vaultwarden /vaultwarden/alive ok"
     else
       echo "警告: 服务 30s 内未就绪，排查: journalctl -u vaultwarden -n 50 --no-pager" >&2
       systemctl status vaultwarden.service --no-pager -n 10 > /dev/null 2>&1 || true
@@ -114,12 +115,13 @@ case "$1" in
     else
       echo "Vaultwarden @VERSION@ 已安装。"
     fi
-    echo "  打开界面 : TOS 桌面 → Vaultwarden 图标（新标签页打开 http://<NAS的IP>:8222/）"
+    echo "  打开界面 : TOS 桌面 → Vaultwarden 图标（经 /vaultwarden/ 路由打开）"
     echo "  首次使用 : 打开网页 → 创建账户（首位注册者即密码库所有者，请立即完成）"
-    echo "  管理后台 : http://<NAS的IP>:8222/admin"
+    echo "  管理后台 : http(s)://<NAS管理地址>/vaultwarden/admin"
     echo "  管理令牌 : ssh 到 NAS 执行  grep ADMIN_TOKEN /usr/local/vaultwarden/vaultwarden.env"
     echo "             （首装自动生成；更换后 systemctl restart vaultwarden 生效）"
-    echo "  各端连接 : 浏览器插件/桌面/移动 App 的自建服务器地址填 http://<NAS的IP>:8222"
+    echo "  各端连接 : 浏览器插件/桌面/移动 App 的自建服务器地址填 http(s)://<NAS>/vaultwarden"
+    echo "  隐私政策 : http(s)://<NAS管理地址>/vaultwarden/privacy-policy.html"
     echo "  ⚠ HTTPS  : 网页保管库登录需要 HTTPS（浏览器安全限制，Bitwarden 固有行为）；"
     echo "             局域网 http 环境请使用各端客户端，或在 NAS 上启用 HTTPS/自建反代"
     echo "  数据位置 : /var/lib/vaultwarden（apt remove 保留，apt purge 彻底删除）"

@@ -1,32 +1,31 @@
 #!/usr/bin/env bash
 # ============================================================
 # build.sh - 在 macOS / Linux 上把 Vaultwarden 打包成 TOS 7 应用中心
-# 规范的 deb 包（WebUI External Open / 新标签页直开端口模式）
+# 规范的 deb 包（WebUI 应用，经 TOS nginx 网关路由访问）
 #
 # 规范依据: https://help.terra-master.com/developer/development-docs/
 #   - Deb Development Specification（目录结构/config.ini/systemd/生命周期）
 #   - Package Specification（版本号三处一致、资产命名）
 #
-# 模式说明（hermes 同款"直开端口"方案，docs/DESIGN_DECISIONS.md D-001）:
-#   Vaultwarden 的 API 全部固定挂载在根路径（/api /identity /notifications
-#   /icons /alive …），web vault 也有根相对请求，不支持子路径部署；
-#   TOS 8181 的根命名空间又是平台自身的，不能占用。
-#   因此不走"回环 + /vaultwarden/ 反代"，而是：
-#     - 服务监听 0.0.0.0:8222，桌面图标新标签页打开 http://${ip}:8222
-#     - 各端客户端（浏览器插件/桌面/移动 App）直连同一地址
-#     - 附带 /vaultwarden/ → :8222 的 nginx 302 兜底路由（满足 External
-#       Open 应用必须带 nginx/ 配置的规范，同时容错手输地址的用户）
+# 访问架构（docs/DESIGN_DECISIONS.md D-010，2026-09 商店审核合规版）:
+#   - config.ini 的 path 为路由 /vaultwarden/（C21：禁直连 URL，
+#     TOS web 入口端口逐机漂移，直开端口的 path 写法必被驳回）
+#   - 服务仅监听 127.0.0.1:<port>（安全审核：0.0.0.0 裸奔一票否决）
+#   - nginx 网关为唯一入口：/vaultwarden/ 保留前缀反代
+#     （vaultwarden 经 DOMAIN 的路径部分原生把全部路由挂在前缀下，
+#     上游官方支持的部署方式；WebSocket 升级头已带）
+#   - 附带隐私政策精确路由 /vaultwarden/privacy-policy.html（C3 必备）
 #
-# 二进制来源（D-002）:
-#   GitHub Release 自 1.37.x 起不再附二进制；官方 Docker 镜像默认 tag 的
-#   二进制是 glibc 动态链接（GLIBC_2.39 > TOS7 的 2.35，不可用）；
-#   <tag>-alpine 镜像内为 static-pie musl 全静态二进制，随包还带配套
-#   web-vault。fetch 阶段经 Docker Registry API 拉取，层 digest 即官方
-#   sha256，天然完成校验与内容固定。
+# 二进制来源（D-011，V6 审核关键）:
+#   source（默认，上架必用）: 本仓库 GitHub Actions 从上游源码 tag
+#     自建的静态 musl 二进制 + bw_web_builds 官方 web vault，
+#     产物来自公开 Release，sha256 与 config.env 钉死值双重校验
+#   compat（仅本地调试）: 上游官方 alpine 镜像提取（预编译 ELF 无
+#     源码可溯，V6 一票否决；产物不得提交商店）
 #
 # 产物（out/）:
 #   vaultwarden_<版本>_<arch>.deb       完整版本名 deb（本地安装/测试用）
-#   vaultwarden_<platform>.deb          Release 资产名 deb（上架上传用）
+#   vaultwarden_{x86_64,aarch64}.deb    Release 资产名 deb（上架上传用）
 #   vaultwarden_<platform>.deb.sha256   上架要求的校验文件
 #
 # 阶段: fetch → stage → verify → deb
@@ -36,6 +35,12 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=config.env
 . "$SCRIPT_DIR/config.env"
+
+# 本地调试逃生门：VW_COMPAT=1 ./build.sh ... 强制 compat 模式
+# （镜像提取，产物禁止上架；见 docs/DESIGN_DECISIONS.md D-011）
+if [ "${VW_COMPAT:-0}" = "1" ]; then
+  BINARY_SOURCE=compat
+fi
 
 BUILD_DIR="$SCRIPT_DIR/build"
 DL_DIR="$BUILD_DIR/downloads"
@@ -62,7 +67,6 @@ case "$TARGET_ARCH" in
     ;;
 esac
 
-IMAGE_TAG="${VAULTWARDEN_VERSION}${IMAGE_TAG_VARIANT}"
 DEB_FILE="$OUT_DIR/${APP_ID}_${VERSION_FULL}_${TARGET_ARCH}.deb"
 STORE_DEB="$OUT_DIR/${APP_ID}_${TOS_PLATFORM}.deb"       # Release 资产命名（无版本）
 
@@ -100,11 +104,37 @@ PYEOF
 stage_fetch() {
   mkdir -p "$DL_DIR"
 
-  # 1. 官方 alpine 镜像中的静态二进制 + 配套 web-vault（Registry API 直拉）
-  log "拉取 $IMAGE_REPO:$IMAGE_TAG ($TARGET_ARCH)"
-  python3 "$SCRIPT_DIR/scripts/fetch_image.py" \
-    --repo "$IMAGE_REPO" --tag "$IMAGE_TAG" --arch "$TARGET_ARCH" \
-    --destdir "$DL_DIR"
+  # 1. 二进制 + web vault（按 BINARY_SOURCE 分流）
+  case "$BINARY_SOURCE" in
+    source)
+      # V6 合规来源：本仓库 Release 的 CI 自建静态二进制
+      # （上游源码 tag → blackdex/rust-musl 容器 → cargo --locked 构建）
+      case "$TARGET_ARCH" in
+        amd64) local PIN="$VW_SHA256_AMD64" ;;
+        arm64) local PIN="$VW_SHA256_ARM64" ;;
+      esac
+      [ -n "$PIN" ] || die "config.env 未钉死 VW_SHA256_$TARGET_ARCH（source 模式必需；CI 出产物后回填）"
+      [ -n "$WEB_VAULT_SHA256" ] || die "config.env 未钉死 WEB_VAULT_SHA256（source 模式必需）"
+      log "拉取自建产物 Release v$VERSION_FULL（$REPO_URL）"
+      python3 "$SCRIPT_DIR/scripts/fetch_release.py" \
+        --repo "${REPO_URL#https://github.com/}" --tag "v$VERSION_FULL" \
+        --arch "$TOS_PLATFORM" --webvault-version "$WEB_VAULT_VERSION" \
+        --pin-binary "$PIN" --pin-webvault "$WEB_VAULT_SHA256" \
+        --destdir "$DL_DIR"
+      ;;
+    compat)
+      # 本地调试：上游官方 alpine 镜像提取（V6 不合规，禁止上架）
+      warn "compat 模式产物禁止提交商店（预编译 ELF，V6 一票否决）"
+      local IMAGE_TAG="${VAULTWARDEN_VERSION}${IMAGE_TAG_VARIANT}"
+      log "拉取 $IMAGE_REPO:$IMAGE_TAG ($TARGET_ARCH)"
+      python3 "$SCRIPT_DIR/scripts/fetch_image.py" \
+        --repo "$IMAGE_REPO" --tag "$IMAGE_TAG" --arch "$TARGET_ARCH" \
+        --destdir "$DL_DIR"
+      ;;
+    *)
+      die "未知 BINARY_SOURCE=$BINARY_SOURCE（支持 source / compat）"
+      ;;
+  esac
 
   # 2. 上游 LICENSE（AGPL-3.0，进 /usr/share/doc/vaultwarden/copyright）
   if [ ! -s "$DL_DIR/LICENSE" ]; then
@@ -117,7 +147,7 @@ stage_fetch() {
       -o "$DL_DIR/LICENSE"
   fi
 
-  # 3. web vault 版本记录（changelog/文档用；与二进制同镜像层，天然配套）
+  # 3. web vault 版本记录（changelog/文档用；与二进制同源配套）
   python3 - "$DL_DIR/web-vault-layer.tgz" "$DL_DIR/web-vault-version.txt" <<'PYEOF'
 import sys, json, tarfile
 tf = tarfile.open(sys.argv[1], "r:gz")
@@ -125,6 +155,10 @@ v = json.load(tf.extractfile("web-vault/version.json"))["version"]
 open(sys.argv[2], "w").write(v + "\n")
 PYEOF
   log "web vault 版本: $(cat "$DL_DIR/web-vault-version.txt")"
+  if [ "$BINARY_SOURCE" = source ]; then
+    [ "$(cat "$DL_DIR/web-vault-version.txt")" = "$WEB_VAULT_VERSION" ] \
+      || die "web vault 版本 ($WEB_VAULT_VERSION) 与 Release 资产不符"
+  fi
 }
 
 # ============================================================
@@ -143,16 +177,15 @@ stage_stage() {
   mkdir -p "$APP/images/icons"
   mkdir -p "$APP/nginx"
   mkdir -p "$APP/init.d"
+  mkdir -p "$APP/privacy"
   mkdir -p "$STAGE_DIR/usr/share/doc/$APP_ID"
 
-  # 二进制（官方 alpine 镜像内的 static-pie musl 静态二进制；规范要求放 bin/）
-  log "  + bin/vaultwarden（上游 $VAULTWARDEN_VERSION，静态）"
+  # 二进制（source 模式为 CI 自建静态 musl；规范要求放 bin/）
+  log "  + bin/vaultwarden（上游 $VAULTWARDEN_VERSION，$BINARY_SOURCE 来源）"
   install -m 0755 "$DL_DIR/vaultwarden" "$APP/bin/vaultwarden"
 
-  # web vault 静态文件（与二进制同镜像层，版本天然配套）
-  # 注意：层 tar 为 macOS 端 Python tarfile 处理（无 AppleDouble 污染路径），
-  # 但仍显式剔除 ._* / .DS_Store 并规整权限
-  log "  + web-vault/（上游 web vault $WEBVAULT_VERSION）"
+  # web vault 静态文件（bw_web_builds 官方发布，与二进制同 Release 配套）
+  log "  + web-vault/（web vault $WEBVAULT_VERSION）"
   python3 - "$DL_DIR/web-vault-layer.tgz" "$APP/web-vault" <<'PYEOF'
 import os, stat, sys, tarfile
 src, dest = sys.argv[1], sys.argv[2]
@@ -188,12 +221,12 @@ print(f"    提取 {count} 个文件")
 PYEOF
 
   # config.ini（严格 JSON；@@...@@ 占位符渲染）
-  # 直开端口模式：path 为完整 URL（hermes 先例），TOS 以 ${ip} 渲染 NAS 地址
-  log "  + config.ini（External Open: open_path=true, path=http://\${ip}:$APP_PORT）"
+  # 路由模式（C21）：path 必须是 /<appid>/ 路由，不得出现 ${ip}/协议/端口
+  log "  + config.ini（path=/vaultwarden/ 路由）"
   sed -e "s|@@VERSION@@|$VERSION_FULL|g" \
       -e "s|@@PUBLISHER@@|$PUBLISHER|g" \
       -e "s|@@PLATFORM@@|$TOS_PLATFORM|g" \
-      -e "s|@@APP_PORT@@|$APP_PORT|g" \
+      -e "s|@@REPO_URL@@|$REPO_URL|g" \
       "$ASSETS_DIR/config.ini.in" > "$APP/config.ini"
 
   # 多语言文件（文件名必须等于 app id；23 语超集覆盖两个官方口径）
@@ -207,35 +240,55 @@ PYEOF
   log "  + images/icons/$APP_ID.svg"
   cp "$ASSETS_DIR/images/icons/$APP_ID.svg" "$APP/images/icons/$APP_ID.svg"
 
-  # nginx 路由：app 目录内 nginx/ 满足 TOS 规范（External Open 应用必带）；
-  # 内容为 /vaultwarden/ → :$APP_PORT 的 302 兜底跳转（见文件头注释）；
+  # nginx 路由：app 目录内 nginx/ 满足 TOS 规范；
+  # 内容为 /vaultwarden/ 保留前缀反代（回环）+ 隐私政策精确路由；
   # 同时以 dpkg 实体文件放 /etc/nginx/conf.d（双落盘模式，postinst 校验自愈）
-  log "  + nginx/ + /etc/nginx/conf.d/（302 兜底跳转到 :$APP_PORT）"
+  log "  + nginx/ + /etc/nginx/conf.d/（保留前缀反代 → 127.0.0.1:$APP_PORT）"
   mkdir -p "$STAGE_DIR/etc/nginx/conf.d"
-  sed -e "s|@@APP_PORT@@|$APP_PORT|g" \
-      "$ASSETS_DIR/nginx/$APP_ID.conf" > "$APP/nginx/$APP_ID.conf"
+  cp "$ASSETS_DIR/nginx/$APP_ID.conf" "$APP/nginx/$APP_ID.conf"
   cp "$APP/nginx/$APP_ID.conf" "$STAGE_DIR/etc/nginx/conf.d/$APP_ID.conf"
 
   # systemd 服务：init.d/ 满足 TOS 规范；同时以 dpkg 实体文件放
   # /etc/systemd/system（双落盘模式，systemd 直接加载，不依赖 postinst 拷贝）
-  log "  + init.d/ + /etc/systemd/system/"
+  log "  + init.d/ + /etc/systemd/system/（回环监听）"
   mkdir -p "$STAGE_DIR/etc/systemd/system"
   cp "$ASSETS_DIR/init.d/$APP_ID.service" "$APP/init.d/$APP_ID.service"
   cp "$ASSETS_DIR/init.d/$APP_ID.service" "$STAGE_DIR/etc/systemd/system/$APP_ID.service"
 
-  # webui.bz2（WebUI 类应用必填；解压须含可打开的 .html。
-  # 直开端口模式下为规范要求的跳转占位页：按当前访问主机的 hostname
-  # 拼出 http://<主机>:8222/ 再跳转）
-  log "  + webui.bz2（占位跳转页 → :$APP_PORT）"
+  # webui.bz2（WebUI 类应用必填；解压须含可打开的 .html）
+  # 入口页：跳转到 /vaultwarden/ 路由 + 隐私政策链接
+  # 坑 46：python tarfile 重打（uid/gid=0、mtime=0、GNU 格式），
+  #        bsdtar 在 macOS 上的 uid 501 污染会触发嵌套归档校验失败
+  log "  + webui.bz2（入口页 → /vaultwarden/，python tarfile 规范重打）"
   local WEBUI_DIR="$BUILD_DIR/webui"
   rm -rf "$WEBUI_DIR"
   mkdir -p "$WEBUI_DIR"
   sed -e "s|@@VERSION@@|$VERSION_FULL|g" \
-      -e "s|@@APP_PORT@@|$APP_PORT|g" \
       "$ASSETS_DIR/webui/index.html" > "$WEBUI_DIR/index.html"
-  export COPYFILE_DISABLE=1
+  normalize_text "$WEBUI_DIR/index.html"
   find "$WEBUI_DIR" -name '._*' -delete 2>/dev/null || true
-  ( cd "$WEBUI_DIR" && COPYFILE_DISABLE=1 tar -cjf "$APP/webui.bz2" index.html )
+  python3 - "$WEBUI_DIR" "$APP/webui.bz2" <<'PYEOF'
+import os, tarfile, sys
+src_dir, out = sys.argv[1], sys.argv[2]
+with tarfile.open(out, "w:bz2", format=tarfile.GNU_FORMAT) as tf:
+    for root, dirs, files in os.walk(src_dir):
+        dirs.sort(); files.sort()
+        for name in files:
+            if name.startswith("._") or name == ".DS_Store":
+                continue
+            full = os.path.join(root, name)
+            arc = os.path.relpath(full, src_dir)
+            ti = tf.gettarinfo(full, arcname=arc)
+            ti.uid = 0; ti.gid = 0; ti.uname = "root"; ti.gname = "root"
+            ti.mtime = 0
+            ti.mode = 0o644
+            with open(full, "rb") as f:
+                tf.addfile(ti, f)
+PYEOF
+
+  # 隐私政策（C3 必备资产；nginx 精确路由 + 包内落盘 + 文档指引三处可达）
+  log "  + privacy/privacy-policy.html（/vaultwarden/privacy-policy.html）"
+  cp "$ASSETS_DIR/privacy/privacy-policy.html" "$APP/privacy/privacy-policy.html"
 
   # 配置模板（以 .example 随包分发，postinst 首装复制为正式 env；升级不覆盖）
   log "  + $APP_ID.env.example 配置模板"
@@ -249,24 +302,49 @@ PYEOF
     echo "Full text follows."
     echo ""
     echo "This package additionally bundles the Bitwarden-compatible web vault"
-    echo "(version $WEBVAULT_VERSION, extracted from the official"
-    echo "vaultwarden/server alpine image, (c) Bitwarden Inc.,"
-    echo "https://github.com/bitwarden/clients — AGPL-3.0)."
+    echo "(version $WEBVAULT_VERSION, from the official bw_web_builds release,"
+    echo "(c) Bitwarden Inc., https://github.com/bitwarden/clients — AGPL-3.0,"
+    echo "patches by Daniel García, https://github.com/dani-garcia/bw_web_builds)."
     echo ""
     tail -n +3 "$DL_DIR/LICENSE"
   } > "$STAGE_DIR/usr/share/doc/$APP_ID/copyright"
   {
     echo "$APP_ID ($VERSION_FULL) TOS7; urgency=medium"
     echo ""
-    echo "  * 基于 Vaultwarden 上游 $VAULTWARDEN_VERSION 打包（官方 alpine 镜像"
-    echo "    static-pie musl 二进制，零运行时依赖，层 digest 校验）"
-    echo "  * 随包 web vault $WEBVAULT_VERSION（与二进制同源配套）"
-    echo "  * WebUI External Open：新标签页直开 http://<NAS-IP>:$APP_PORT/"
-    echo "    （Vaultwarden API 固定根路径挂载，不支持子路径反代）"
-    echo "  * 管理后台 /admin，安装时自动生成 ADMIN_TOKEN"
+    echo "  * Vaultwarden 上游 $VAULTWARDEN_VERSION（本仓库 CI 从官方源码"
+    echo "    tag 自建的静态 musl 二进制，溯源见 PROVENANCE.md）"
+    echo "  * 随包 web vault $WEBVAULT_VERSION（bw_web_builds 官方发布）"
+    echo "  * 经 TOS 网关路由 /vaultwarden/ 访问（保留前缀反代 + WebSocket）"
+    echo "  * 服务仅监听回环 127.0.0.1，隐私政策见 /vaultwarden/privacy-policy.html"
+    echo "  * 管理后台 /vaultwarden/admin，安装时自动生成 ADMIN_TOKEN"
     echo ""
     echo " -- $MAINTAINER_FULL  $(date -R 2>/dev/null || date '+%a, %d %b %Y %H:%M:%S %z')"
   } > "$STAGE_DIR/usr/share/doc/$APP_ID/changelog.Debian"
+
+  # 构建溯源（V6/坑 43：源码-产物对应关系随包可查）
+  {
+    echo "Vaultwarden for TOS — build provenance"
+    echo "====================================="
+    echo "Package version : $VERSION_FULL ($TOS_PLATFORM)"
+    echo "Upstream source : https://github.com/dani-garcia/vaultwarden"
+    echo "Upstream tag    : $VAULTWARDEN_VERSION"
+    echo "Web vault       : bw_web_builds v$WEBVAULT_VERSION (official release)"
+    echo "Binary origin   : GitHub Actions build from the upstream source tag"
+    echo "                  $REPO_URL (CI workflow: .github/workflows/release.yml)"
+    echo "Toolchain       : blackdex/rust-musl <arch>-musl-stable-1.98.1"
+    echo "                  cargo build --features sqlite,mysql,postgresql,enable_mimalloc"
+    echo "                  --profile release --target <arch>-unknown-linux-musl"
+    if [ "$BINARY_SOURCE" = source ]; then
+      echo "Binary sha256   : $( [ "$TARGET_ARCH" = amd64 ] && echo "$VW_SHA256_AMD64" || echo "$VW_SHA256_ARM64" )"
+      echo "Web vault sha256: $WEB_VAULT_SHA256"
+      echo "Release         : $REPO_URL/releases/tag/v$VERSION_FULL"
+    else
+      echo "Binary sha256   : (compat mode: extracted from official alpine image)"
+      echo "!! This binary was NOT built by the public CI (compat/local mode)."
+      echo "!! Do not submit this build to the TOS App Center."
+    fi
+    echo "Reproducible build: see $REPO_URL (VERIFICATION.md, repro-build.sh)"
+  } > "$STAGE_DIR/usr/share/doc/$APP_ID/PROVENANCE.md"
 
   # 规范清洗：LF 行尾 + 去 BOM（.ini/.lang/.conf/.service/env/.sh/.html；
   # web-vault 为上游二进制资产，不动）
@@ -278,8 +356,10 @@ PYEOF
     "$APP/init.d/"*.service \
     "$STAGE_DIR/etc/systemd/system/"*.service \
     "$APP/"*.example \
+    "$APP/privacy/privacy-policy.html" \
     "$STAGE_DIR/usr/share/doc/$APP_ID/copyright" \
-    "$STAGE_DIR/usr/share/doc/$APP_ID/changelog.Debian"
+    "$STAGE_DIR/usr/share/doc/$APP_ID/changelog.Debian" \
+    "$STAGE_DIR/usr/share/doc/$APP_ID/PROVENANCE.md"
 
   # 清理 macOS 扩展属性，避免污染 tar（AppleDouble / quarantine）
   if command -v xattr >/dev/null 2>&1; then
@@ -292,7 +372,7 @@ PYEOF
 }
 
 # ============================================================
-# 阶段: verify —— 目标架构与规范关键项校验
+# 阶段: verify —— 目标架构与规范关键项校验（商店审核门禁）
 # ============================================================
 stage_verify() {
   local APP="$STAGE_DIR/usr/local/$APP_ID"
@@ -311,15 +391,17 @@ stage_verify() {
            "$APP/web-vault/index.html" \
            "$APP/web-vault/version.json" \
            "$APP/webui.bz2" \
+           "$APP/privacy/privacy-policy.html" \
            "$APP/$APP_ID.env.example" \
-           "$STAGE_DIR/usr/share/doc/$APP_ID/copyright"; do
+           "$STAGE_DIR/usr/share/doc/$APP_ID/copyright" \
+           "$STAGE_DIR/usr/share/doc/$APP_ID/PROVENANCE.md"; do
     [ -e "$p" ] || { warn "缺失: ${p#$STAGE_DIR/}"; fail=1; }
   done
 
-  log "校验 config.ini（JSON 合法性 / 互斥字段 / 版本一致性）..."
-  python3 - "$APP/config.ini" "$VERSION_FULL" "$TOS_PLATFORM" "$APP_ID" "$APP_USER" "$APP_PORT" <<'PYEOF' || fail=1
-import json, sys
-cfg_path, want_ver, want_plat, app_id, app_user, app_port = sys.argv[1:7]
+  log "校验 config.ini（JSON 合法性 / 路由 path / 版本一致性）..."
+  python3 - "$APP/config.ini" "$VERSION_FULL" "$TOS_PLATFORM" "$APP_ID" "$APP_USER" <<'PYEOF' || fail=1
+import json, re, sys
+cfg_path, want_ver, want_plat, app_id, app_user = sys.argv[1:6]
 cfg = json.load(open(cfg_path))
 errs = []
 if cfg.get("id") != app_id: errs.append(f"id != {app_id}")
@@ -327,19 +409,27 @@ if cfg.get("version") != want_ver: errs.append(f"version != {want_ver}")
 if cfg.get("system_id") != app_id: errs.append("system_id 不一致")
 if cfg.get("package") != app_id: errs.append("package 不一致")
 if cfg.get("platform") != want_plat: errs.append(f"platform != {want_plat}")
-# WebUI External Open: open_path=true 且不得出现 type；
-# 直开端口模式：path 为 http://${ip}:<port>（hermes 先例）
 if cfg.get("open_path") is not True: errs.append("open_path 必须为 true")
 if "type" in cfg: errs.append("不得包含 type 字段（与 open_path 互斥）")
-if cfg.get("path") != f"http://${{ip}}:{app_port}": errs.append(f"path 必须为 http://${{ip}}:{app_port}")
+# C21：path 必须是 /<appid>/ 形式路由；直连 URL（${ip}/协议/端口）必被驳回
+path = cfg.get("path", "")
+if not re.fullmatch(r"/[a-z0-9_-]+/", path):
+    errs.append(f"path 必须为 /<appid>/ 路由格式（当前: {path!r}）")
+if path != f"/{app_id}/":
+    errs.append(f"path 应为 /{app_id}/")
+if "${ip}" in path or "://" in path or ":" in path:
+    errs.append("path 不得含 ${ip} / 协议 / 端口（C21 直连写法）")
+if not re.fullmatch(r"https://\S+", cfg.get("official", "")):
+    errs.append("official 必须为可达的 https URL（30a 机器验链）")
 if cfg.get("user") != app_user: errs.append(f"user 应为 {app_user}")
 if cfg.get("recommend") is not False: errs.append("recommend 提交时必须为 false")
+if cfg.get("beta") is not False: errs.append("beta 必须为 false（V11 双重门禁）")
 for e in errs:
     print(f"    校验失败: {e}", file=sys.stderr)
 sys.exit(1 if errs else 0)
 PYEOF
 
-  log "校验 .lang（23 语超集，覆盖两个官方口径）..."
+  log "校验 .lang（23 语超集 + 版本一致 + 禁 beta 字样）..."
   local lang_missing
   lang_missing=$(python3 - "$APP/$APP_ID.lang" <<'PYEOF'
 import sys
@@ -353,8 +443,16 @@ print(",".join(missing))
 PYEOF
 )
   [ -z "$lang_missing" ] || { warn "lang 缺少语言节: $lang_missing"; fail=1; }
+  # V11：beta 双重门禁之文案门（config 已查，此处查 lang 文本）
+  if grep -qiE '(^|[^a-z])beta([^a-z]|$)' "$APP/$APP_ID.lang"; then
+    warn "lang 文案含 beta 字样（V11 门禁：未过 beta 审核不得出现）"
+    fail=1
+  fi
+  if grep -q "@@VERSION@@\|@@UPSTREAM@@\|@@WEBVAULT@@" "$APP/$APP_ID.lang"; then
+    warn "lang 存在未渲染的占位符"; fail=1
+  fi
 
-  log "校验 systemd 服务（禁 Restart/必配 StartLimit/禁 ExecStart 变量展开）..."
+  log "校验 systemd 服务（回环监听 / 禁 Restart / 禁 ExecStart 变量展开）..."
   local svc
   for svc in "$APP/init.d/"*.service \
              "$STAGE_DIR/etc/systemd/system/"*.service; do
@@ -364,28 +462,89 @@ PYEOF
     grep -q '^StartLimitBurst=' "$svc" || { warn "缺少 StartLimitBurst: $svc"; fail=1; }
     grep -q '^StartLimitIntervalSec=' "$svc" || { warn "缺少 StartLimitIntervalSec: $svc"; fail=1; }
     grep -q "^User=$APP_USER" "$svc" || { warn "必须 User=$APP_USER: $svc"; fail=1; }
+    # 安全审核：服务必须回环监听（0.0.0.0 无平台鉴权 = 一票否决）
+    grep -q '^Environment=ROCKET_ADDRESS=127\.0\.0\.1$' "$svc" \
+      || { warn "unit 必须内置 Environment=ROCKET_ADDRESS=127.0.0.1（回环）: $svc"; fail=1; }
+    grep -q "^Environment=DOMAIN=.*/$APP_ID\$" "$svc" \
+      || { warn "unit 必须内置 DOMAIN（路径部分 /$APP_ID 与 nginx 路由联动）: $svc"; fail=1; }
   done
-
-  log "校验监听默认值写死在 unit（0.0.0.0:$APP_PORT，env 可覆盖）..."
-  grep -q '^Environment=ROCKET_ADDRESS=0\.0\.0\.0' "$APP/init.d/$APP_ID.service" \
-    || { warn "unit 必须内置 Environment=ROCKET_ADDRESS=0.0.0.0"; fail=1; }
   grep -q "^Environment=ROCKET_PORT=$APP_PORT\$" "$APP/init.d/$APP_ID.service" \
     || { warn "unit 必须内置 Environment=ROCKET_PORT=$APP_PORT"; fail=1; }
   grep -q '^Environment=DATA_FOLDER=/var/lib/vaultwarden' "$APP/init.d/$APP_ID.service" \
     || { warn "unit 必须内置 Environment=DATA_FOLDER"; fail=1; }
 
-  log "校验 nginx 兜底跳转（302 → :$APP_PORT，不反代）..."
-  grep -q "return 302 http://\$host:$APP_PORT" "$APP/nginx/$APP_ID.conf" \
-    || { warn "nginx conf 必须为 302 跳转到 :$APP_PORT"; fail=1; }
+  log "校验 nginx 路由（保留前缀反代回环 + WS 头 + 隐私政策精确路由）..."
+  grep -q "proxy_pass http://127\.0\.0\.1:$APP_PORT/$APP_ID/" "$APP/nginx/$APP_ID.conf" \
+    || { warn "nginx 必须保留前缀反代到 127.0.0.1:$APP_PORT/$APP_ID/"; fail=1; }
+  grep -q 'proxy_set_header Upgrade' "$APP/nginx/$APP_ID.conf" \
+    || { warn "nginx 缺 WebSocket Upgrade 头"; fail=1; }
+  grep -q 'proxy_set_header Connection' "$APP/nginx/$APP_ID.conf" \
+    || { warn "nginx 缺 WebSocket Connection 头"; fail=1; }
+  grep -qE 'location = /'"$APP_ID"'/privacy-policy\.html' "$APP/nginx/$APP_ID.conf" \
+    || { warn "nginx 缺隐私政策精确路由（C3）"; fail=1; }
+  grep -q "alias .*privacy/privacy-policy\.html" "$APP/nginx/$APP_ID.conf" \
+    || { warn "nginx 隐私政策路由必须 alias 到包内落盘文件"; fail=1; }
+  grep -qE 'return 302 http' "$APP/nginx/$APP_ID.conf" \
+    && { warn "nginx 不得再含直开端口 302 跳转（D-001 已废止）"; fail=1; }
 
-  log "校验 webui.bz2（解压含 .html）..."
-  tar tjf "$APP/webui.bz2" | grep -q '\.html$' || { warn "webui.bz2 缺少 html"; fail=1; }
-  if tar tjf "$APP/webui.bz2" | grep -qE '(^|/)\._'; then
-    warn "webui.bz2 含 AppleDouble ._ 垃圾条目（macOS 污染）"
-    fail=1
-  fi
+  log "校验隐私政策资产（C3：双语 + 内嵌样式 + 三处可达）..."
+  grep -qi '<h1>.*Privacy Policy' "$APP/privacy/privacy-policy.html" \
+    || { warn "privacy-policy.html 缺英文标题"; fail=1; }
+  grep -q '隐私政策' "$APP/privacy/privacy-policy.html" \
+    || { warn "privacy-policy.html 缺中文版（双语要求）"; fail=1; }
+  grep -q '/var/lib/vaultwarden' "$APP/privacy/privacy-policy.html" \
+    || { warn "privacy-policy.html 应说明数据存放路径"; fail=1; }
+  grep -q 'privacy-policy.html' "$APP/webui/index.html" 2>/dev/null \
+    || true  # 入口页链接为可发现性加分项，不设硬门
 
-  log "校验 ELF 架构（目标: $ELF_ARCH；必须为静态链接）..."
+  log "校验 webui.bz2（坑 46：归档元数据 uid/gid=0、mtime=0、无 macOS 污染）..."
+  python3 - "$APP/webui.bz2" <<'PYEOF' || fail=1
+import sys, tarfile
+bad = []
+with tarfile.open(sys.argv[1], "r:bz2") as tf:
+    names = tf.getnames()
+    if not any(n.endswith(".html") for n in names):
+        bad.append("缺少 html 入口")
+    for m in tf.getmembers():
+        if m.name.startswith("._") or "/._" in m.name or m.name == ".DS_Store":
+            bad.append(f"AppleDouble 条目: {m.name}")
+        if m.uid != 0 or m.gid != 0:
+            bad.append(f"uid/gid 非 0: {m.name} uid={m.uid} gid={m.gid}")
+        if m.mtime != 0:
+            bad.append(f"mtime 非 0: {m.name} mtime={m.mtime}")
+if bad:
+    for b in bad:
+        print(f"    {b}", file=sys.stderr)
+    sys.exit(1)
+print(f"    {len(names)} 个成员全部合规")
+PYEOF
+
+  log "校验图标（坑 47：XML 完整性 / viewBox / 主 path 存在）..."
+  python3 - "$APP/images/icons/$APP_ID.svg" <<'PYEOF' || fail=1
+import re, sys, xml.etree.ElementTree as ET
+path = sys.argv[1]
+try:
+    root = ET.parse(path).getroot()
+except ET.ParseError as e:
+    print(f"    SVG 解析失败: {e}", file=sys.stderr); sys.exit(1)
+errs = []
+if root.tag.endswith("svg") is False:
+    errs.append("根元素不是 svg")
+vb = root.get("viewBox", "")
+if not re.fullmatch(r"[0-9.\s-]+", vb) or len(vb.split()) != 4:
+    errs.append(f"viewBox 缺失/畸形: {vb!r}")
+paths = [el for el in root.iter() if el.tag.endswith("path")]
+if not paths or not any(len(el.get("d", "")) > 50 for el in paths):
+    errs.append("缺少有效的主 path")
+fills = {el.get("fill") for el in root.iter() if el.get("fill")}
+if not fills - {None, "none"}:
+    errs.append("缺少显式 fill 颜色")
+for e in errs:
+    print(f"    {e}", file=sys.stderr)
+sys.exit(1 if errs else 0)
+PYEOF
+
+  log "校验 ELF（架构 $ELF_ARCH / 静态链接 / 无 UPX 摘除段表 / sha256 钉死）..."
   local bin_out
   bin_out=$(file "$APP/bin/vaultwarden")
   if echo "$bin_out" | grep -q "ELF.*$ELF_ARCH"; then
@@ -396,10 +555,28 @@ PYEOF
   fi
   # 坑 28：glibc 动态二进制混入 = TOS 装机必挂（GLIBC_2.39 > TOS 2.35）
   if echo "$bin_out" | grep -q "dynamically linked"; then
-    warn "二进制是动态链接（官方默认镜像的 glibc 版本混入？TOS 不可用）: $bin_out"
+    warn "二进制是动态链接（glibc 版本混入？TOS 不可用）: $bin_out"
     fail=1
   else
     log "  ok: 静态链接"
+  fi
+  # 坑 31：UPX 摘除段表的二进制过不了 V6（file 输出会标注 "no section header"）
+  if echo "$bin_out" | grep -q "no section header"; then
+    warn "二进制段表缺失（UPX 加壳特征，V6 驳回）"
+    fail=1
+  fi
+  if [ "$BINARY_SOURCE" = source ]; then
+    local want_pin bin_sha
+    case "$TARGET_ARCH" in amd64) want_pin="$VW_SHA256_AMD64" ;; arm64) want_pin="$VW_SHA256_ARM64" ;; esac
+    bin_sha=$(sha256_of "$APP/bin/vaultwarden")
+    if [ "$bin_sha" = "$want_pin" ]; then
+      log "  ok: sha256 与 config.env 钉死值一致（CI 产物链完整）"
+    else
+      warn "二进制 sha256 与钉死值不符: $bin_sha != $want_pin"
+      fail=1
+    fi
+  else
+    warn "compat 模式：跳过 sha256 钉死校验（产物禁止上架）"
   fi
 
   log "检查 macOS Mach-O / AppleDouble 混入（应为 0）..."
@@ -448,8 +625,9 @@ stage_info() {
   cat <<EOF
 Vaultwarden 版本: $VAULTWARDEN_VERSION (完整版本 $VERSION_FULL)
 web vault 版本  : $(cat "$DL_DIR/web-vault-version.txt" 2>/dev/null || echo 未 fetch)
+二进制来源     : $BINARY_SOURCE（source=CI 自建 / compat=镜像提取仅本地）
 目标架构       : $TARGET_ARCH (TOS:$TOS_PLATFORM)
-TOS app id     : $APP_ID（新标签页直开 http://<IP>:$APP_PORT）
+TOS app id     : $APP_ID（入口路由 /$APP_ID/，回环 :$APP_PORT）
 产物           : $DEB_FILE
 上架资产       : $STORE_DEB + .sha256（Release tag: v$VERSION_FULL）
 EOF

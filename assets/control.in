@@ -10,19 +10,22 @@ Homepage: https://github.com/dani-garcia/vaultwarden
 Description: Vaultwarden Password Manager - self-hosted Bitwarden-compatible server
  Vaultwarden is a self-hosted, Bitwarden-compatible password manager
  server written in Rust. It bundles the official web vault (login page
- and admin panel at /admin) and serves the full Bitwarden API, so the
- Bitwarden browser extensions, desktop and mobile apps can connect to
- your NAS directly.
+ and admin panel at /vaultwarden/admin) and serves the full Bitwarden
+ API, so the Bitwarden browser extensions, desktop and mobile apps can
+ connect to your NAS directly at /vaultwarden.
  .
- The app opens in a new browser tab at http://<NAS-IP>:8222 (direct
- port mode: Vaultwarden's API endpoints are hard-mounted at the URL
- root and cannot be served behind a path prefix). A random
- ADMIN_TOKEN is generated at install time; see
+ The service listens on loopback only and is reached through the TOS
+ gateway route /vaultwarden/ (reverse proxy with WebSocket support).
+ A random ADMIN_TOKEN is generated at install time; see
  /usr/local/vaultwarden/vaultwarden.env. Vault data (SQLite database,
  attachments, sends, icon cache) lives in /var/lib/vaultwarden and
  survives removal ('apt remove'); 'apt purge' deletes it entirely.
+ Privacy policy: /vaultwarden/privacy-policy.html. Build provenance:
+ PROVENANCE.md in /usr/share/doc/vaultwarden/.
  .
  Note: the browser web vault requires HTTPS to unlock/log in (browser
  WebCrypto secure-context restriction, inherent to all Bitwarden web
  vaults). On plain-HTTP LANs use the Bitwarden clients, or enable
  HTTPS on the NAS / place a reverse proxy in front.
+ Upstream author: Daniel García (https://github.com/dani-garcia);
+ packaged for TOS by Moechz.

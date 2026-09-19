@@ -12,12 +12,14 @@ Group=vaultwarden
 WorkingDirectory=/usr/local/vaultwarden
 # Vaultwarden 没有命令行参数，全部配置经环境变量/数据目录 config.json 读取。
 # 默认参数写死在 unit（等价于 navidrome 的 ExecStart flags 写死策略）：
-#   直开端口模式（D-001）：必须监听 0.0.0.0 才能被桌面图标与各端客户端访问；
-#   DATA_FOLDER / WEB_VAULT_FOLDER 指向本包规范路径。
+#   仅监听 127.0.0.1（TOS nginx 网关是唯一入口，路由 /vaultwarden/）；
+#   DOMAIN 的路径部分决定路由挂载前缀，必须与 nginx 路由保持 /vaultwarden，
+#   协议/主机/端口部分请在 vaultwarden.env 里按实际访问地址覆盖。
 # 下方 EnvironmentFile 在其后声明 → env 文件可覆盖以上一切默认值
-# （改端口/数据目录写 vaultwarden.env 即可，无需动 unit）。
-Environment=ROCKET_ADDRESS=0.0.0.0
+# （改数据目录/域名等写 vaultwarden.env 即可，无需动 unit）。
+Environment=ROCKET_ADDRESS=127.0.0.1
 Environment=ROCKET_PORT=8222
+Environment=DOMAIN=http://127.0.0.1:8181/vaultwarden
 Environment=DATA_FOLDER=/var/lib/vaultwarden
 Environment=WEB_VAULT_FOLDER=/usr/local/vaultwarden/web-vault
 EnvironmentFile=-/usr/local/vaultwarden/vaultwarden.env
