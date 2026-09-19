@@ -175,12 +175,12 @@ jobs:
           - How to verify / reproduce: see VERIFICATION.md in this repository
           EOF
           )
-          gh release create "$TAG" --title "$TAG" --notes "$body" \
+          gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "$TAG" --notes "$body" \
             assets/vaultwarden-x86_64.tar.gz \
             assets/vaultwarden-aarch64.tar.gz \
             assets/web-vault-*.tar.gz \
             assets/SHA256SUMS \
-            || gh release upload "$TAG" --clobber \
+            || gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber \
             assets/vaultwarden-x86_64.tar.gz \
             assets/vaultwarden-aarch64.tar.gz \
             assets/web-vault-*.tar.gz \
