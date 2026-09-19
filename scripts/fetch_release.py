@@ -105,7 +105,7 @@ def main():
 
     names = {
         "bin": f"vaultwarden-{args.arch}.tar.gz",
-        "wv": f"web-vault-{args.webvault-version}.tar.gz",
+        "wv": f"web-vault-{args.webvault_version}.tar.gz",
         "sums": "SHA256SUMS",
     }
     log(f"查询 Release {args.repo} {args.tag}")

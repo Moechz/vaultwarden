@@ -321,7 +321,8 @@ PYEOF
     echo " -- $MAINTAINER_FULL  $(date -R 2>/dev/null || date '+%a, %d %b %Y %H:%M:%S %z')"
   } > "$STAGE_DIR/usr/share/doc/$APP_ID/changelog.Debian"
 
-  # 构建溯源（V6/坑 43：源码-产物对应关系随包可查）
+  # 构建溯源（V6/坑 43：源码-产物对应关系随包可查；注意放应用目录——
+  # TOS dpkg path-exclude 会剥离 /usr/share/doc 下非 copyright/changelog 文件）
   {
     echo "Vaultwarden for TOS — build provenance"
     echo "====================================="
@@ -344,7 +345,7 @@ PYEOF
       echo "!! Do not submit this build to the TOS App Center."
     fi
     echo "Reproducible build: see $REPO_URL (VERIFICATION.md, repro-build.sh)"
-  } > "$STAGE_DIR/usr/share/doc/$APP_ID/PROVENANCE.md"
+  } > "$APP/PROVENANCE.md"
 
   # 规范清洗：LF 行尾 + 去 BOM（.ini/.lang/.conf/.service/env/.sh/.html；
   # web-vault 为上游二进制资产，不动）
@@ -357,9 +358,9 @@ PYEOF
     "$STAGE_DIR/etc/systemd/system/"*.service \
     "$APP/"*.example \
     "$APP/privacy/privacy-policy.html" \
+    "$APP/PROVENANCE.md" \
     "$STAGE_DIR/usr/share/doc/$APP_ID/copyright" \
-    "$STAGE_DIR/usr/share/doc/$APP_ID/changelog.Debian" \
-    "$STAGE_DIR/usr/share/doc/$APP_ID/PROVENANCE.md"
+    "$STAGE_DIR/usr/share/doc/$APP_ID/changelog.Debian"
 
   # 清理 macOS 扩展属性，避免污染 tar（AppleDouble / quarantine）
   if command -v xattr >/dev/null 2>&1; then
@@ -393,8 +394,8 @@ stage_verify() {
            "$APP/webui.bz2" \
            "$APP/privacy/privacy-policy.html" \
            "$APP/$APP_ID.env.example" \
-           "$STAGE_DIR/usr/share/doc/$APP_ID/copyright" \
-           "$STAGE_DIR/usr/share/doc/$APP_ID/PROVENANCE.md"; do
+           "$APP/PROVENANCE.md" \
+           "$STAGE_DIR/usr/share/doc/$APP_ID/copyright"; do
     [ -e "$p" ] || { warn "缺失: ${p#$STAGE_DIR/}"; fail=1; }
   done
 
