@@ -115,6 +115,22 @@ def main():
         die(f"Release 缺少资产: {missing}（现有: {list(assets)}；先跑 CI 并发布 Release）")
 
     dl = args.destdir
+    # 缓存按 tag 隔离：同一文件名的资产在不同 tag 下内容不同（CI 重建 → 哈希变），
+    # 仅按文件名判断“已缓存”会把旧 tag 的产物当成本 tag 的资产（且会连带复用
+    # 旧 SHA256SUMS，使校验层 1 也“自证通过”）。换 tag 必须整体失效重下。
+    tag_marker = os.path.join(dl, ".fetch.tag")
+    prev_tag = None
+    if os.path.exists(tag_marker):
+        with open(tag_marker, encoding="utf-8") as fh:
+            prev_tag = fh.read().strip()
+    if prev_tag != args.tag:
+        stale = [os.path.join(dl, n) for n in list(names.values()) + ["vaultwarden"]
+                 if os.path.exists(os.path.join(dl, n))]
+        if prev_tag is not None and stale:
+            log(f"  缓存 tag 变更（{prev_tag} → {args.tag}），失效重下 {len(stale)} 个文件")
+        for p in stale:
+            os.remove(p)
+
     for key, name in names.items():
         dest = os.path.join(dl, name)
         if os.path.exists(dest) and os.path.getsize(dest) > 0:
@@ -122,6 +138,8 @@ def main():
         else:
             log(f"  下载: {name}（{assets[name]['size'] / 1e6:.1f} MB）")
             http_get(assets[name]["url"], dest, token=token)
+    with open(tag_marker, "w", encoding="utf-8") as fh:
+        fh.write(args.tag)
 
     # ---- 校验 1：Release 内 SHA256SUMS ----
     log("校验 Release SHA256SUMS")
@@ -136,7 +154,10 @@ def main():
             die(f"SHA256SUMS 未覆盖 {name}")
         got = sha256_file(os.path.join(dl, name))
         if got != sums[name]:
-            die(f"{name} sha256 与 SHA256SUMS 不符: {got} != {sums[name]}")
+            # 损坏/截断（链路抖动常见）：删掉缓存，下次运行才会真正重下
+            os.remove(os.path.join(dl, name))
+            die(f"{name} sha256 与 SHA256SUMS 不符: {got} != {sums[name]}\n"
+                f"（已删除损坏缓存，直接重跑即可重下）")
 
     # ---- 解包二进制 & 校验 2：config.env 钉死值 ----
     log("解包二进制 tar.gz")
