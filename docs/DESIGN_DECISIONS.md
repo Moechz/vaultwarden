@@ -121,3 +121,18 @@
 **Decision:** stage 阶段不再用 macOS bsdtar 打 webui.bz2，改为 Python tarfile（GNU_FORMAT，全部成员 uid/gid=0、uname/gname=root、mtime=0、mode 0644）；verify 断言归档内每个成员的 uid/gid/mtime 均 = 0。
 **Consequences:**
 - 嵌套归档里的 macOS uid 501 污染会触发商店 S11 校验失败（坑 46）；同模式适用于未来任何嵌套归档资产。
+
+### D-015: 图标精简重写（官方 Icon Compliance 驳回整改）
+**Decision:** 弃用上游 Inkscape 导出图标（62 元素节点），改为几何等价的手工精简 SVG：
+11 个元素 / 2704 字节（原 5356 字节），无 filter、无 `<use>`、无 sodipodi/inkscape/RDF 冗余。
+手法：保留原 `matrix(2.4381018…)` 组变换与坐标空间，把 32 个齿轮齿、5 个卡榫三角、5 个铆钉孔
+分别用矩阵展开合并为**单条 path 的多子路径**（原来靠 31+4+4 个 `<use xlink:href>` 复制）；
+功能性 `<mask>`（5 个铆钉孔）保留但内容同样合并为单 path。
+**Consequences:**
+- 官方首审驳回原文：clean SVG、≤ 50 KB、≤ 50 nodes、去 filters/冗余层（坑 52 已入指南）。
+- 节点口径为 **SVG 元素数**（kavita 160 条路径指令/7 节点过审；本项目 7 条指令/62 节点被拒）。
+- 渲染保真：qlmanage 256px 逐像素比对与原件一致（齿轮/卡榫/铆钉孔/V 字全部保留）。
+- 门禁双层落地（防回退）：check_assets.py 与 build.sh verify 均断言
+  体积 ≤ 50 KB、元素数 ≤ 50、无 filter/`<use>`/namedview/metadata/RDF；同时保留
+  坑 47 的 XML/viewBox/主 path/fill 断言。
+- 教训：品牌几何保真 ≠ 保留原始节点结构；上游图标“能渲染”不代表合规。

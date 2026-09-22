@@ -165,7 +165,7 @@ else:
 if re.search(r"^ExecStart=.*\$", unit, re.M):
     err("unit: ExecStart 含变量展开（坑 1） ✗")
 
-# ---------- 7. 图标 SVG 完整性（坑 47） ----------
+# ---------- 7. 图标 SVG 完整性 + 官方商店合规（坑 47 / 坑 51） ----------
 svg_path = ROOT / f"assets/images/icons/{APP_ID}.svg"
 try:
     root = ET.parse(svg_path).getroot()
@@ -187,5 +187,23 @@ else:
         print(f"icon: 显式 fill ✓ {sorted(fills)}")
     else:
         err("icon: 缺少显式 fill ✗")
+
+    # --- 坑 51：官方审核图标硬指标（alist/vaultwarden 驳回实录）---
+    size = svg_path.stat().st_size
+    if size <= 50 * 1024:
+        print(f"icon: 体积 {size} B ≤ 50 KB ✓")
+    else:
+        err(f"icon: 体积 {size} B 超 50 KB 上限（坑 51） ✗")
+    nodes = len(list(root.iter()))
+    if nodes <= 50:
+        print(f"icon: 节点数 {nodes} ≤ 50 ✓")
+    else:
+        err(f"icon: 节点数 {nodes} 超 50 上限（坑 51：禁用 <use> 复制挤节点） ✗")
+    tags = {el.tag.split("}")[-1] for el in root.iter()}
+    banned = sorted(tags & {"filter", "foreignObject", "use", "namedview", "metadata", "RDF"})
+    if banned:
+        err(f"icon: 含禁用元素/编辑器冗余 {banned}（坑 51） ✗")
+    else:
+        print("icon: 无 filter/<use>/编辑器冗余（干净 SVG） ✓")
 
 sys.exit(fail)

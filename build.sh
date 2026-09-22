@@ -519,7 +519,7 @@ if bad:
 print(f"    {len(names)} 个成员全部合规")
 PYEOF
 
-  log "校验图标（坑 47：XML 完整性 / viewBox / 主 path 存在）..."
+  log "校验图标（坑 47：XML 完整性 / viewBox / 主 path；坑 51：≤ 50 KB / ≤ 50 节点 / 无 filter）..."
   python3 - "$APP/images/icons/$APP_ID.svg" <<'PYEOF' || fail=1
 import re, sys, xml.etree.ElementTree as ET
 path = sys.argv[1]
@@ -539,8 +539,22 @@ if not paths or not any(len(el.get("d", "")) > 50 for el in paths):
 fills = {el.get("fill") for el in root.iter() if el.get("fill")}
 if not fills - {None, "none"}:
     errs.append("缺少显式 fill 颜色")
+# 坑 51：官方审核图标硬指标
+import os
+size = os.path.getsize(path)
+if size > 50 * 1024:
+    errs.append(f"图标体积 {size} B 超 50 KB（坑 51）")
+nodes = len(list(root.iter()))
+if nodes > 50:
+    errs.append(f"图标节点数 {nodes} 超 50（坑 51）")
+tags = {el.tag.split("}")[-1] for el in root.iter()}
+banned = sorted(tags & {"filter", "foreignObject", "use", "namedview", "metadata", "RDF"})
+if banned:
+    errs.append(f"图标含禁用元素/编辑器冗余 {banned}（坑 51）")
 for e in errs:
     print(f"    {e}", file=sys.stderr)
+if not errs:
+    print(f"    图标合规：{size} B / {nodes} 节点 / viewBox={vb}")
 sys.exit(1 if errs else 0)
 PYEOF
 
